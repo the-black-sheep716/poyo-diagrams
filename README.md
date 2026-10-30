@@ -33,8 +33,10 @@ One page serves all four diagrams; the address decides which one opens:
 | `select` | a number, e.g. `12`; for `actors` a card ID such as `A005` | opens record № 12 (chronogram) or amount № 12 (money) at the start |
 | `pad` | `0`–`80` (default 14) | space around the diagram in pixels |
 | `wheel` | `0` (default), `1` | `1` = the mouse wheel zooms; otherwise Ctrl / ⌘ + wheel, so the page around can still scroll |
+| `towns` | a colour such as `2b5cff`, or `auto` | colour of the town shading on the map, for this frame only (default: the colour saved in the page) |
+| `tint` | `0.4`–`2.5` | how strongly the towns are tinted (default: as saved in the page) |
 
-Example: `?d=money&tools=0&bg=clear&select=7`.
+Example: `?d=money&tools=0&bg=clear&select=7&towns=2b5cff`.
 
 ## Where it works
 

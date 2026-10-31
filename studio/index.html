@@ -678,6 +678,19 @@ body.embed .sheet-grip { display: flex; }
 .towns-ctl .towns-strength label { font-size: 11.5px; color: var(--muted); }
 .towns-ctl .towns-strength input[type=range] { width: 100%; }
 
+/* v4.5 · the base colour of the town shading: ready colours, a strip that previews the steps, and the style */
+.towns-ctl .town-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 2px 42px; }
+.towns-ctl .town-chip { width: 19px; height: 19px; padding: 0; border-radius: 50%; border: 2px solid var(--panel, #fff); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink, #111) 22%, transparent); cursor: pointer; }
+.towns-ctl .town-chip:hover { transform: scale(1.12); }
+.towns-ctl .town-chip.on { box-shadow: 0 0 0 2px var(--ink, #111); }
+.towns-ctl .town-ramp { display: flex; height: 12px; margin: 7px 0 2px 42px; border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink, #111) 14%, transparent); }
+.towns-ctl .town-ramp i { flex: 1; }
+.towns-ctl .towns-style { display: grid; gap: 3px; margin: 6px 0 6px 42px; }
+.towns-ctl .towns-style label { font-size: 11.5px; color: var(--muted); }
+.towns-ctl .towns-style select { width: 100%; }
+.towns-ctl [hidden] { display: none !important; }
+.towns-ctl .towns-style .hint { font-size: 11px; color: var(--muted); line-height: 1.35; }
+
 </style>
 </head>
 <body data-screen="poster">
@@ -1040,7 +1053,7 @@ body.embed .sheet-grip { display: flex; }
     poster: {
       background: '#F7F7F5', ink: '#0B0B0B', muted: '#686863', rule: '#D9D9D4', accent: '#E6007E', accent2: '#F5B700',
       water: '#0091B9', phaseBase: '#F5B700', featured: '#E6007E',
-      towns: '', townsStrength: 1,       // colour of the town shading ('' = follows the theme) and how strongly it tints (1 = gentle, up to 2.5)
+      towns: '', townsStrength: 1, townsStyle: '',       // colour of the town shading ('' = follows the theme), how strongly the gentle tint is applied (1 = gentle, up to 2.5), and its style ('' = steps on the money map and gentle on the chronogram map, 'steps', 'tint')
       fontScale: 1.2, titleFont: 'Inter Display', textFont: 'Inter', monoFont: 'Inter',
       kicker: 'Poyo Riverscape · Chronogram',
       title: 'Timeline of Repair', noteLabel: 'Note',
@@ -3779,7 +3792,7 @@ body.embed .sheet-grip { display: flex; }
     return { bg: bg, ink: ink, muted: pc.muted, rule: pc.rule, accent: pc.accent, accent2: pc.accent2 || '#f5b700',
       water: pc.water || '#0091b9', phaseBase: pc.phaseBase || pc.accent2 || '#f5b700', featured: pc.featured || pc.accent,
       leader: K.mix(bg, ink, 0.42), tint: function (t) { return K.mix(bg, ink, t); },
-      land: PCS.mmTheme && PCS.mmTheme.landFor ? PCS.mmTheme.landFor(pc, pc.water || '#0091b9') : null };
+      land: PCS.mmTheme && PCS.mmTheme.landFor ? PCS.mmTheme.landFor(pc, pc.water || '#0091b9', { where: 'chronogram' }) : null };
   };
   /** Colour of an event title in its callout. */
   P.titleColour = function (cat, C, config) {
@@ -5255,8 +5268,37 @@ window.PCS.DEFAULT_LOCATIONS = [
     var grey = k.C < 0.02;
     return function (L, t) { var bell = 0.3 + 0.7 * Math.sin(Math.PI * (0.12 + 0.76 * clamp(t, 0, 1))); return T.oklch(L, grey ? 0.004 : cmax * bell, k.h); };
   };
-  /** The land tint of a poster palette (config.poster): the author's colour and strength when set, else the theme's own. */
-  T.landFor = function (P, water) { return T.landTint(T.landKey(P), water, { pinned: T.landPinned(P), strength: T.landStrength(P) }); };
+  /**
+   * Which way the towns are shaded. 'steps' is a single-colour graduated ramp, the way a GIS styles a choropleth: the palest tint of the base colour for the
+   * smallest class, the base colour itself for the largest. 'tint' is the gentle tint of the preset that keeps the grey lightness steps (the first
+   * versions). The author's choice (config.poster.townsStyle) wins; otherwise the money map uses steps and the chronogram map keeps its gentle tint.
+   */
+  T.landStyle = function (P, where) {
+    var s = P && P.townsStyle;
+    if (s === 'steps' || s === 'tint') return s;
+    return where === 'chronogram' ? 'tint' : 'steps';
+  };
+  /**
+   * The ramp of a base colour: fn(L, t) ignores L and returns the colour at position t in 0…1, from a pale tint of the hue (t = 0) to the base colour (t = 1).
+   * Lightness and chroma both run linearly between the two ends, so the middle steps are the same hue, neither muddy nor washed out. On a light paper the
+   * strongest step is held to a lightness of 0.66 or less (a yellow base becomes a deep gold), so the top class always stands apart from the paper; on a dark
+   * paper the ramp starts near the paper and rises to the base colour, held between 0.62 and 0.82. A grey base gives a neutral ramp.
+   */
+  T.landSteps = function (key, dark) {
+    var k = T.toOklch(key || '#E6007E'), grey = k.C < 0.02;
+    var Ls = dark ? clamp(k.L, 0.62, 0.82) : Math.min(k.L, 0.66), L0 = dark ? 0.3 : 0.955;
+    var Cs = grey ? 0.004 : k.C, C0 = grey ? 0.003 : Math.min(0.04, Cs * 0.25);
+    return function (L, t) { t = clamp(t, 0, 1); return T.oklch(L0 + (Ls - L0) * t, C0 + (Cs - C0) * Math.pow(t, 0.85), k.h); };
+  };
+  /**
+   * The land colours of a poster palette (config.poster): the author's colour, style and strength when set, else the theme's own.
+   * o.where is 'money' (default) or 'chronogram': the style the author left on automatic differs between the two (see landStyle).
+   */
+  T.landFor = function (P, water, o) {
+    var key = T.landKey(P);
+    if (T.landStyle(P, o && o.where) === 'steps') return T.landSteps(key, UC.isDark(P.background));
+    return T.landTint(key, water, { pinned: T.landPinned(P), strength: T.landStrength(P) });
+  };
   T.identity = function () { return T.fromConfig(PCS.app && PCS.app.config ? PCS.app.config : PCS.DEFAULTS); };
   /**
    * The money-map theme of the studio's current colours (config.poster + config.categories): one theme for every drawing.
@@ -5283,9 +5325,12 @@ window.PCS.DEFAULT_LOCATIONS = [
       payer: { 'Insurance (CCS)': ink, 'State': blue, 'CHJ / MITECO': lg(wat), 'Generalitat': amber, 'Town halls': green, 'European Union': lg(magenta), 'Other': slate, 'Not stated': stone },
       logic: { 'Plans before the flood': purple, 'Compensation for private loss': ink, 'Emergency response costs': amber, 'Aid to public bodies': blue, 'Works and emergency contracts': green, 'Land back to the river space': lg(wat), 'Funding sources': lg(magenta), 'Not grouped': slate },
       ui: { bg: '#ececea', panel: '#f6f6f4', rule: '#d6d6d2', rule2: '#e8e8e4', accent: magenta, accentSoft: UC.mix(paper, magenta, 0.16) },
-      _ramp: (function (tint) { return dark ? function (t) { return tint(0.3 + 0.42 * t, t); } : function (t) { return tint(0.94 - 0.42 * t, t); }; })(T.landFor(P, wat))
+      _ramp: (function (land, steps) {
+        if (steps) return function (t) { return land(0, t); };          // single-colour steps: the ramp sets its own lightness
+        return dark ? function (t) { return land(0.3 + 0.42 * t, t); } : function (t) { return land(0.94 - 0.42 * t, t); };
+      })(T.landFor(P, wat, { where: 'money' }), T.landStyle(P, 'money') === 'steps')
     };
-    th.key = 'cfg|' + [paper, ink, line, slate, magenta, wat, th.tab, T.landKey(P), T.landStrength(P), cat.emergency, cat.infrastructure, cat.community, cat.ecological, cat.planning, cat.temporary].join('|');
+    th.key = 'cfg|' + [paper, ink, line, slate, magenta, wat, th.tab, T.landKey(P), T.landStyle(P, 'money'), T.landStrength(P), cat.emergency, cat.infrastructure, cat.community, cat.ecological, cat.planning, cat.temporary].join('|');
     return finish(th);
   };
 
@@ -8758,7 +8803,7 @@ window.PCS.DEFAULT_LOCATIONS = [
   var themeKey = '';
   function paletteKey() {
     var c = app.config, P = c.poster;
-    return [P.background, P.ink, P.muted, P.rule, P.accent, P.accent2, P.water, P.phaseBase, P.towns || '', P.townsStrength || 1].join('|') + '|' + c.categories.map(function (x) { return x.id + x.color; }).join(',');
+    return [P.background, P.ink, P.muted, P.rule, P.accent, P.accent2, P.water, P.phaseBase, P.towns || '', P.townsStrength || 1, P.townsStyle || ''].join('|') + '|' + c.categories.map(function (x) { return x.id + x.color; }).join(',');
   }
   /** The money map draws with the colours of the config (the same ones as the chronogram and the animation). */
   function syncTheme() {
@@ -9696,30 +9741,44 @@ window.PCS.DEFAULT_LOCATIONS = [
 
   /* ---------------- the colour of the towns ----------------------------------------------------------------- */
   /**
-   * The control for the colour of the town shading: a picker, "Follow the theme", and a strength slider. The same setting (config.poster.towns and
-   * townsStrength) shades the municipalities of the chronogram map, the towns of the money map, the animation and every export, so the control
-   * appears in the Theme panel and next to the town shading of each tab; whichever is used, the others follow (syncTowns).
+   * The control for the shading of the towns: a base colour (the strongest step of the ramp), a row of ready colours, a strip that previews the steps,
+   * the style (steps or the gentle tint) and, for the gentle tint, a strength slider. The same setting (config.poster.towns, townsStyle and
+   * townsStrength) shades the towns of the money map, the municipalities of the chronogram map, the animation and every export, so the control appears in the
+   * Theme panel and next to the town shading of each tab; whichever is used, the others follow (syncTowns).
    */
+  var TOWN_CHIPS = [['#C41E24', 'Red'], ['#E6007E', 'Magenta'], ['#E8590C', 'Orange'], ['#2B5CFF', 'Blue'], ['#0E8C8C', 'Teal'], ['#00995F', 'Green'], ['#7A4FD3', 'Violet'], ['#5C5C58', 'Grey']];
+  var TOWN_STYLES = [['', 'Automatic', 'Steps on the Money map, the gentle tint on the Chronogram map.'], ['steps', 'Steps on every map', 'Single-colour steps, from a pale tint up to the base colour.'], ['tint', 'Gentle tint on every map', 'A soft tint of the base colour; the slider sets how strong.']];
   function strengthWord(s) { return s < 0.8 ? 'soft' : s < 1.25 ? 'gentle' : s < 1.8 ? 'strong' : 'bold'; }
   function syncTowns() { Array.prototype.forEach.call(document.querySelectorAll('.towns-ctl'), function (n) { if (n._sync) n._sync(); }); }
   function townsChanged() { app().update({ debounce: 120 }); refreshSwatches(); syncTowns(); }
   UI.townsControl = function () {
     var P = function () { return cfg().poster; }, box = h('div', { class: 'towns-ctl' });
     var row = h('label', { class: 'colour' }), inp = h('input', { type: 'color' }), hex = h('span', { class: 'hex' });
-    row.appendChild(inp); row.appendChild(h('span', { class: 'nm' }, 'Town shading colour')); row.appendChild(hex);
+    row.appendChild(inp); row.title = 'The strongest step of the shading; the lighter steps are made from it'; row.appendChild(h('span', { class: 'nm' }, 'Base colour')); row.appendChild(hex);
+    var chips = h('div', { class: 'town-chips', role: 'group', 'aria-label': 'Ready base colours' });
+    TOWN_CHIPS.forEach(function (c) { chips.appendChild(h('button', { type: 'button', class: 'town-chip', 'data-c': c[0], title: c[1], 'aria-label': c[1], style: 'background:' + c[0] })); });
+    var ramp = h('div', { class: 'town-ramp', 'aria-hidden': 'true' });
     var note = h('div', { class: 'towns-note' }), what = h('span', {}), auto = h('button', { type: 'button', class: 'btn link', title: 'Use the colour the theme gives the towns' }, 'Follow the theme');
     note.appendChild(what); note.appendChild(auto);
+    var st = h('div', { class: 'towns-style' }), stl = h('label', {}, 'Style'), sel = h('select', { 'aria-label': 'How the towns are shaded' });
+    TOWN_STYLES.forEach(function (o) { sel.appendChild(h('option', { value: o[0] }, esc(o[1]))); });
+    var sh = h('div', { class: 'hint' }); st.appendChild(stl); st.appendChild(sel); st.appendChild(sh);
     var sr = h('div', { class: 'towns-strength' }), sl = h('label', {}, ''), rng = h('input', { type: 'range', min: '0.4', max: '2.5', step: '0.05', 'aria-label': 'How strongly the towns are tinted' });
     sr.appendChild(sl); sr.appendChild(rng);
-    box.appendChild(row); box.appendChild(note); box.appendChild(sr);
+    [row, chips, ramp, note, st, sr].forEach(function (n) { box.appendChild(n); });
     box._sync = function () {
-      var pin = T.landPinned(P()), k = T.landKey(P()), s = T.landStrength(P());
+      var p = P(), pin = T.landPinned(p), k = T.landKey(p), s = T.landStrength(p), style = p.townsStyle === 'steps' || p.townsStyle === 'tint' ? p.townsStyle : '';
       inp.value = /^#[0-9a-f]{6}$/i.test(k) ? k.toLowerCase() : '#f5b700'; hex.textContent = inp.value;
+      Array.prototype.forEach.call(chips.children, function (b) { b.classList.toggle('on', pin && b.getAttribute('data-c').toLowerCase() === String(p.towns).toLowerCase()); });
+      ramp.innerHTML = T.fromConfig(cfg()).swatches.ramp.map(function (c) { return '<i style="background:' + c + '"></i>'; }).join('');
       what.textContent = pin ? 'Chosen by you' : 'Follows the theme'; auto.hidden = !pin;
-      rng.value = String(s); sl.textContent = 'Strength: ' + strengthWord(s) + ' (' + (Math.round(s * 20) / 20).toFixed(2).replace(/0$/, '') + '×)';
+      sel.value = style; sr.hidden = style === 'steps'; sh.textContent = TOWN_STYLES.filter(function (o) { return o[0] === style; })[0][2];
+      rng.value = String(s); sl.textContent = 'Gentle tint: ' + strengthWord(s) + ' (' + (Math.round(s * 20) / 20).toFixed(2).replace(/0$/, '') + '×)';
     };
     inp.addEventListener('input', function () { P().towns = inp.value.toUpperCase(); townsChanged(); });
+    chips.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.town-chip'); if (!b) return; P().towns = b.getAttribute('data-c').toUpperCase(); townsChanged(); });
     auto.addEventListener('click', function () { P().towns = ''; townsChanged(); });
+    sel.addEventListener('change', function () { P().townsStyle = sel.value; townsChanged(); });
     rng.addEventListener('input', function () { P().townsStrength = +rng.value; townsChanged(); });
     box._sync();
     return box;
@@ -9811,7 +9870,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     el.appendChild(h('div', { class: 'pop-note' }, 'One set of colours for the whole studio: the chronogram, the animation, the money map, Present and every export.'));
     document.body.appendChild(el);
     $('th-close').onclick = UI.close;
-    $('th-reset').onclick = function () { cfg().poster.towns = ''; cfg().poster.townsStrength = 1; applyPreset('riverscape'); syncTowns(); };
+    $('th-reset').onclick = function () { cfg().poster.towns = ''; cfg().poster.townsStrength = 1; cfg().poster.townsStyle = ''; applyPreset('riverscape'); syncTowns(); };
     el.addEventListener('change', function (e) {
       var t = e.target, id = t.id, g = gen();
       if (id === 'th-scheme') { g.scheme = t.value; applyGen(g); draw(); }
@@ -10734,7 +10793,8 @@ window.PCS.DEFAULT_LOCATIONS = [
       panel: flag('panel', true), tools: flag('tools', true), 'switch': flag('switch', !named), wheel: flag('wheel', false),
       bg: String(raw('bg') || 'glass'), select: String(raw('select') || ''),
       pad: isNaN(pad) ? 14 : U.clamp(pad, 0, 80),
-      towns: String(q && q.get('towns') || ''), tint: q && q.get('tint') !== null && q.get('tint') !== '' ? parseFloat(q.get('tint')) : NaN      // colour and strength of the town shading, for this frame only
+      towns: String(q && q.get('towns') || ''), tint: q && q.get('tint') !== null && q.get('tint') !== '' ? parseFloat(q.get('tint')) : NaN,
+      shading: String(q && q.get('shading') || '').toLowerCase()      // colour, strength and style of the town shading, for this frame only
     };
   }
   if (E.on) {
@@ -10810,12 +10870,14 @@ window.PCS.DEFAULT_LOCATIONS = [
     if (color) { b.classList.add('embed-flat'); b.style.backgroundImage = 'none'; b.style.backgroundColor = color; }
   }
 
-  /** ?towns=2b5cff (a colour; "auto" = the page's own) and ?tint=1.6 (strength, 0.4–2.5) set the shading of the towns for this frame; nothing is saved. */
+  /** ?towns=2b5cff (the base colour; "auto" = the page's own), ?shading=steps|tint|auto (the style) and ?tint=1.6 (strength of the gentle tint, 0.4–2.5) set the shading of the towns for this frame; nothing is saved. */
   function townShading(P) {
     var c = PCS.app.config.poster, hex = String(P.towns || '').replace(/^#/, ''), changed = false;
     if (/^[0-9a-f]{6}$/i.test(hex)) { c.towns = '#' + hex.toUpperCase(); changed = true; }
     else if (/^(auto|theme|none)$/i.test(hex)) { c.towns = ''; changed = true; }
     if (isFinite(P.tint) && P.tint > 0) { c.townsStrength = U.clamp(P.tint, 0.4, 2.5); changed = true; }
+    if (P.shading === 'steps' || P.shading === 'tint') { c.townsStyle = P.shading; changed = true; }
+    else if (P.shading === 'auto') { c.townsStyle = ''; changed = true; }
     if (changed) PCS.app.update();
   }
   function buildBar() {
@@ -11061,10 +11123,11 @@ window.PCS.DEFAULT_LOCATIONS = [
     '| `select` | a number, e.g. `12`; for `actors` a card ID such as `A005` | opens record № 12 (chronogram) or amount № 12 (money) at the start |',
     '| `pad` | `0`–`80` (default 14) | space around the diagram in pixels |',
     '| `wheel` | `0` (default), `1` | `1` = the mouse wheel zooms; otherwise Ctrl / ⌘ + wheel, so the page around can still scroll |',
-    '| `towns` | a colour such as `2b5cff`, or `auto` | colour of the town shading on the map, for this frame only (default: the colour saved in the page) |',
-    '| `tint` | `0.4`–`2.5` | how strongly the towns are tinted (default: as saved in the page) |',
+    '| `towns` | a colour such as `c41e24`, or `auto` | base colour of the town shading (the strongest step), for this frame only (default: the colour saved in the page) |',
+    '| `shading` | `steps`, `tint`, `auto` | style of the town shading: single-colour steps, the gentle tint, or steps on the money map and the gentle tint on the chronogram map (default: as saved in the page) |',
+    '| `tint` | `0.4`–`2.5` | how strongly the gentle tint is applied (default: as saved in the page) |',
     '',
-    'Example: `?d=money&tools=0&bg=clear&select=7&towns=2b5cff`.',
+    'Example: `?d=money&tools=0&bg=clear&select=7&towns=c41e24`.',
     '',
     '## Where it works',
     '',

@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eef0f4">
+<meta name="color-scheme" content="light dark">
+<!-- the interface appearance (Auto, Light or Dark) is applied before the first paint -->
+<script id="ui-early">(function () { try { var m = JSON.parse(localStorage.getItem('pcs.ui.appearance') || '"auto"'); var d = m === 'dark' || (m !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.setAttribute('data-ui', d ? 'dark' : 'light'); var t = document.querySelector('meta[name="theme-color"]'); if (t) t.setAttribute('content', d ? '#0b0c0f' : '#eef0f4'); } catch (e) { /* the light interface */ } })();</script>
 <title>Poyo Chronogram Studio</title>
 <meta name="description" content="Circular chronogram of the Poyo Basin after the DANA flood of 29 October 2024: research workspace and poster generator.">
 <style>
@@ -37,6 +41,21 @@
   --sans: 'Inter', -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --serif: 'Inter Display', 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
   --mono: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --page: #eef0f4;            /* the page behind everything (the backdrop gradient is drawn over it) */
+  --on-ink: #fff;             /* text on an --ink fill */
+  --btn-bg: rgba(255, 255, 255, .72); --hover-wash: rgba(255, 255, 255, .6); --track: rgba(11, 11, 11, .06);
+  --shade-1: rgba(11, 11, 11, .07); --shade-2: rgba(11, 11, 11, .14); --grip: rgba(11, 11, 11, .22); --grip-h: rgba(11, 11, 11, .45);
+  --stage-fill: rgba(255, 255, 255, .26); --stage-line: rgba(255, 255, 255, .55); --stage-hi: rgba(255, 255, 255, .6);
+  --glass-sh: 0 0 0 .5px rgba(11, 11, 11, .05), 0 10px 32px rgba(11, 11, 11, .08);
+  --sheet-sh: 0 0 0 .5px rgba(11, 11, 11, .08), 0 24px 70px rgba(11, 11, 11, .22);
+  --primary-a: #2c2c32; --primary-b: #0b0b0d; --primary-ah: #3a3a42; --primary-bh: #17171a; --primary-hi: rgba(255, 255, 255, .14);
+  --wash: 26%; --wash-2: 22%;
+  --ed-opt: rgba(255, 255, 255, .7); --ed-opt-on: #fff; --ed-field: #fff; --ed-prev: #e9eaee; --ed-busy: rgba(238, 240, 244, .9); --ed-more: rgba(255, 255, 255, .55);
+  --warn-bg: #fff6e0; --warn-line: #ecce80; --warn-ink: #5a4300; --over: #fff5fa;
+  --scrim: rgba(11, 11, 14, .4);
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%236b6b66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --line: var(--rule);
+  color-scheme: light;
   --bar: 64px;                /* top bar with its margin */
   --head: 48px;               /* the bar of each drawing */
   --left: 296px; --right: 340px;
@@ -45,13 +64,13 @@
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
-body { background-color: #eef0f4; color: var(--ink); font: 13px/1.45 var(--sans); overflow: hidden; -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11', 'ss03'; display: flex; flex-direction: column; height: 100vh; }
+body { background-color: var(--page); color: var(--ink); font: 13px/1.45 var(--sans); overflow: hidden; -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11', 'ss03'; display: flex; flex-direction: column; height: 100vh; }
 @supports (background: color-mix(in srgb, red 10%, transparent)) {
   body { background-image:
-    radial-gradient(62vw 56vh at 6% -6%, color-mix(in srgb, var(--g1) 26%, transparent), transparent 70%),
-    radial-gradient(58vw 56vh at 104% 4%, color-mix(in srgb, var(--g2) 24%, transparent), transparent 70%),
-    radial-gradient(64vw 62vh at 92% 108%, color-mix(in srgb, var(--g3) 26%, transparent), transparent 70%),
-    radial-gradient(52vw 52vh at -4% 104%, color-mix(in srgb, var(--g4) 22%, transparent), transparent 70%); background-attachment: fixed; }
+    radial-gradient(62vw 56vh at 6% -6%, color-mix(in srgb, var(--g1) var(--wash), transparent), transparent 70%),
+    radial-gradient(58vw 56vh at 104% 4%, color-mix(in srgb, var(--g2) var(--wash), transparent), transparent 70%),
+    radial-gradient(64vw 62vh at 92% 108%, color-mix(in srgb, var(--g3) var(--wash), transparent), transparent 70%),
+    radial-gradient(52vw 52vh at -4% 104%, color-mix(in srgb, var(--g4) var(--wash-2), transparent), transparent 70%); background-attachment: fixed; }
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -69,7 +88,7 @@ kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px soli
 .btn:hover { background: var(--surface-2); border-color: var(--faint); }
 .btn:active { transform: translateY(.5px); }
 .btn:disabled, .tool:disabled { opacity: .4; cursor: default; pointer-events: none; }
-.btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
 .btn.primary:hover { background: #2a2a29; border-color: #2a2a29; }
 .btn.small { height: 26px; padding: 0 9px; font-size: 11.5px; border-radius: var(--r-sm); }
 .btn.link { height: auto; border: 0; background: none; padding: 1px 0; color: var(--ink); text-decoration: underline; text-decoration-color: var(--faint); font-weight: 500; border-radius: 0; }
@@ -101,7 +120,7 @@ kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border: 1px soli
 .tabs button.active { color: var(--ink); font-weight: 600; }
 .seg-nav { background: var(--surface-3); padding: 3px; border-radius: 10px; gap: 2px; }
 .seg-nav button { height: 30px; padding: 0 16px; border-radius: 8px; font-size: 13px; }
-.seg-nav button:hover { background: rgba(255, 255, 255, .6); }
+.seg-nav button:hover { background: var(--hover-wash); }
 .seg-nav button.active { background: var(--surface); box-shadow: var(--sh-1), 0 0 0 .5px rgba(11, 11, 11, .08); }
 .data-nav { padding-left: 14px; border-left: 1px solid var(--rule); }
 .data-nav button.active { background: var(--surface-3); }
@@ -157,7 +176,7 @@ body[data-screen="poster"] .stage-hint .h-poster, body[data-screen="money"] .sta
 input[type=text], input[type=date], input[type=number], input[type=url], input[type=search], select, textarea {
   width: 100%; height: 32px; background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--r); padding: 0 10px; font-size: 12.5px; transition: border-color .12s, box-shadow .12s;
 }
-select { appearance: none; padding-right: 28px; background: var(--surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%236b6b66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right 10px center; }
+select { appearance: none; padding-right: 28px; background: var(--surface) var(--select-arrow) no-repeat right 10px center; }
 textarea { height: auto; min-height: 72px; padding: 8px 10px; resize: vertical; font-size: 12.5px; line-height: 1.45; }
 textarea.code { font: 11px/1.4 ui-monospace, 'SF Mono', Menlo, monospace; min-height: 140px; }
 input:hover, select:hover, textarea:hover { border-color: var(--faint); }
@@ -176,7 +195,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .section .body .hint b { color: var(--ink-2); font-weight: 600; }
 .seg { display: flex; padding: 2px; gap: 2px; background: var(--surface-3); border-radius: var(--r); }
 .seg button { flex: 1; height: 26px; border: 0; background: transparent; border-radius: var(--r-sm); padding: 0 6px; font-size: 11.5px; font-weight: 500; color: var(--ink-2); transition: background .12s, color .12s; }
-.seg button:hover { background: rgba(255, 255, 255, .6); }
+.seg button:hover { background: var(--hover-wash); }
 .seg button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1), 0 0 0 .5px rgba(11, 11, 11, .08); }
 input[type=range] { width: 100%; accent-color: var(--ink); height: 20px; padding: 0; border: 0; background: none; }
 input[type=range]:focus { box-shadow: none; }
@@ -281,11 +300,11 @@ table.data tr.dim td { opacity: .42; }
 .es-keys span { display: inline-flex; align-items: center; gap: 4px; }
 
 /* ---------- tooltip / toast / popover ---------- */
-.tooltip { position: fixed; z-index: 100; pointer-events: none; background: var(--ink); color: #fff; font-size: 12px; padding: 7px 10px; max-width: 330px; line-height: 1.4; border-radius: var(--r); box-shadow: var(--sh-2); }
+.tooltip { position: fixed; z-index: 100; pointer-events: none; background: var(--ink); color: var(--on-ink); font-size: 12px; padding: 7px 10px; max-width: 330px; line-height: 1.4; border-radius: var(--r); box-shadow: var(--sh-2); }
 .tooltip .t-meta { font-size: 10.5px; opacity: .72; }
 .tooltip b { font-weight: 600; }
-.tooltip .t2 { color: #cfcfcb; }
-.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; font-size: 12.5px; z-index: 120; max-width: 70vw; border-radius: var(--r-lg); box-shadow: var(--sh-3); }
+.tooltip .t2 { opacity: .8; }
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--on-ink); padding: 11px 18px; font-size: 12.5px; z-index: 120; max-width: 70vw; border-radius: var(--r-lg); box-shadow: var(--sh-3); }
 .toast.err { background: var(--err); }
 .popover { position: fixed; top: calc(var(--bar) + 2px); right: 12px; width: 372px; max-height: calc(100vh - var(--bar) - 24px); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--sh-3); z-index: 70; overflow: hidden; }
 .popover[hidden] { display: none; }
@@ -381,7 +400,7 @@ table.data tr.dim td { opacity: .42; }
 .imgs .imgs-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow-y: auto; }
 .imgs-row { display: flex; gap: 10px; border: 1px solid var(--rule); border-radius: var(--r); padding: 8px; background: var(--surface); outline: none; transition: border-color .12s; }
 .imgs-row:focus { border-color: var(--ink); }
-.imgs-row.over { border-color: var(--accent); background: #fff5fa; }
+.imgs-row.over { border-color: var(--accent); background: var(--over); }
 .imgs-row .th { flex: 0 0 56px; height: 42px; border-radius: 5px; background: var(--surface-3) center / cover no-repeat; display: flex; align-items: center; justify-content: center; font: 700 10px var(--sans); color: var(--faint); }
 .imgs-row.has .th { box-shadow: 0 0 0 1px var(--ink); }
 .imgs-row .tx { flex: 1; min-width: 0; font-size: 11.5px; }
@@ -426,8 +445,8 @@ table.data tr.dim td { opacity: .42; }
 /* the details of an amount (right-hand panel in the Money tab) */
 .detail.mm-detail .empty { padding: 56px 28px; color: var(--muted); text-align: center; }
 .detail.mm-detail .dh { padding: 18px 18px 12px; border-bottom: 1px solid var(--rule-2); }
-.detail.mm-detail .dh .num { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 700; font-size: 12px; align-items: center; justify-content: center; margin-right: 8px; }
-.detail.mm-detail .dh .num.lead { background: #fff; color: var(--ink); border: 1.5px dashed var(--ink); }
+.detail.mm-detail .dh .num { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--on-ink); font-weight: 700; font-size: 12px; align-items: center; justify-content: center; margin-right: 8px; }
+.detail.mm-detail .dh .num.lead { background: var(--surface); color: var(--ink); border: 1.5px dashed var(--ink); }
 .detail.mm-detail h2 { margin: 8px 0 4px; font: 700 16px/1.3 var(--serif); letter-spacing: -.2px; }
 .detail.mm-detail .amt { font: 700 26px var(--serif); letter-spacing: -.6px; }
 .detail.mm-detail .sub { color: var(--muted); font-size: 12px; }
@@ -447,7 +466,7 @@ table.data tr.dim td { opacity: .42; }
 .detail.mm-detail .rec:first-child { border-top: 0; }
 .detail.mm-detail .rec .btn { margin-top: 5px; }
 .detail.mm-detail .pic { width: 100%; border-radius: var(--r); box-shadow: 0 0 0 1px var(--rule); margin-top: 6px; }
-.detail.mm-detail .warnbox { background: #fff6e0; border: 1px solid #ecce80; border-radius: var(--r); padding: 9px 11px; font-size: 12px; color: #5a4300; }
+.detail.mm-detail .warnbox { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: var(--r); padding: 9px 11px; font-size: 12px; color: var(--warn-ink); }
 .detail.mm-detail .field { display: flex; flex-direction: column; gap: 3px; }
 .detail.mm-detail input[type=text] { width: 100%; }
 .detail.mm-detail .ml-edit { margin-top: 0; border-top: 0; padding-top: 0; }
@@ -562,16 +581,16 @@ body[data-screen="animation"] #sh-zoom, body[data-screen="table"] #stage-head, b
    ===================================================================== */
 .topbar, .controls, .stage-head, .stage-foot, .sheet, .stage-hint, .stage-notice, .popover {
   background: var(--glass); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);
-  border: 1px solid var(--glass-line); box-shadow: 0 0 0 .5px rgba(11, 11, 11, .05), 0 10px 32px rgba(11, 11, 11, .08);
+  border: 1px solid var(--glass-line); box-shadow: var(--glass-sh);
 }
 .menu-list { background: var(--glass-strong); -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); border: 1px solid var(--glass-line); border-radius: var(--r-lg); }
-.stage-main { background: rgba(255, 255, 255, .26); -webkit-backdrop-filter: blur(30px) saturate(1.4); backdrop-filter: blur(30px) saturate(1.4); border: 1px solid rgba(255, 255, 255, .55); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 10px 32px rgba(11, 11, 11, .06); }
+.stage-main { background: var(--stage-fill); -webkit-backdrop-filter: blur(30px) saturate(1.4); backdrop-filter: blur(30px) saturate(1.4); border: 1px solid var(--stage-line); box-shadow: inset 0 1px 0 var(--stage-hi), 0 10px 32px rgba(11, 11, 11, .06); }
 .view-table, .view-checks, .view-mapping, .view-pictures { border-radius: var(--r-xl); }
-.btn.primary { background: linear-gradient(180deg, #2c2c32, #0b0b0d); border-color: #0b0b0d; box-shadow: 0 1px 2px rgba(11, 11, 11, .25), inset 0 1px 0 rgba(255, 255, 255, .14); }
-.btn.primary:hover { background: linear-gradient(180deg, #3a3a42, #17171a); }
-.btn, .tool { background: rgba(255, 255, 255, .72); }
+.btn.primary { background: linear-gradient(180deg, var(--primary-a), var(--primary-b)); border-color: var(--primary-b); box-shadow: 0 1px 2px rgba(11, 11, 11, .25), inset 0 1px 0 var(--primary-hi); }
+.btn.primary:hover { background: linear-gradient(180deg, var(--primary-ah), var(--primary-bh)); }
+.btn, .tool { background: var(--btn-bg); }
 .brand-mark { background: linear-gradient(180deg, var(--g3), var(--g1)); }
-.seg-nav { background: rgba(11, 11, 11, .06); }
+.seg-nav { background: var(--track); }
 .section > summary { padding: 13px 18px; }
 .section .body { padding: 2px 18px 16px; }
 .controls .section:last-child { border-bottom: 0; }
@@ -579,15 +598,15 @@ body[data-screen="animation"] #sh-zoom, body[data-screen="table"] #stage-head, b
 .stage-notice { bottom: 16px; }
 
 /* the sheet */
-.sheet { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20; width: min(800px, calc(100% - 28px)); max-height: min(46%, 430px); display: none; flex-direction: column; border-radius: var(--r-xl); container-type: inline-size; background: var(--glass-strong); box-shadow: 0 0 0 .5px rgba(11, 11, 11, .08), 0 24px 70px rgba(11, 11, 11, .22); overflow: hidden; }
+.sheet { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20; width: min(800px, calc(100% - 28px)); max-height: min(46%, 430px); display: none; flex-direction: column; border-radius: var(--r-xl); container-type: inline-size; background: var(--glass-strong); box-shadow: var(--sheet-sh); overflow: hidden; }
 body.detail-open .sheet { display: flex; animation: sheet-in .26s cubic-bezier(.2, .8, .2, 1); }
 @keyframes sheet-in { from { opacity: 0; transform: translate(-50%, 28px) scale(.98); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 .sheet .detail { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .sheet-grip { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 72px; height: 22px; border: 0; background: none; z-index: 3; display: flex; align-items: center; justify-content: center; border-radius: 0 0 12px 12px; }
-.sheet-grip i { display: block; width: 38px; height: 4px; border-radius: 4px; background: rgba(11, 11, 11, .22); transition: background .12s, width .12s; }
-.sheet-grip:hover i { background: rgba(11, 11, 11, .45); width: 46px; }
-.sheet-x { position: absolute; top: 12px; right: 14px; z-index: 3; width: 30px; height: 30px; border: 0; border-radius: 50%; background: rgba(11, 11, 11, .07); color: var(--ink-2); font-size: 19px; line-height: 1; display: flex; align-items: center; justify-content: center; }
-.sheet-x:hover { background: rgba(11, 11, 11, .14); color: var(--ink); }
+.sheet-grip i { display: block; width: 38px; height: 4px; border-radius: 4px; background: var(--grip); transition: background .12s, width .12s; }
+.sheet-grip:hover i { background: var(--grip-h); width: 46px; }
+.sheet-x { position: absolute; top: 12px; right: 14px; z-index: 3; width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--shade-1); color: var(--ink-2); font-size: 19px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.sheet-x:hover { background: var(--shade-2); color: var(--ink); }
 body.sheet-peek .sheet .detail { max-height: 126px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); }
 .sheet .d-head { position: static; background: none; border-bottom: 1px solid var(--rule-2); padding: 20px 60px 12px 24px; }
 .sheet .d-body { padding: 8px 24px 28px; }
@@ -615,31 +634,31 @@ body.sheet-away .sheet { transform: translate(-50%, calc(100% + 40px)); opacity:
 .ed-card > header { display: flex; align-items: flex-start; gap: 16px; padding: 18px 22px 14px; border-bottom: 1px solid var(--rule-2); }
 .ed-card h2 { margin: 0; font: 700 17px var(--serif); letter-spacing: -.2px; }
 .ed-card header p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); max-width: 640px; }
-.ed-x { margin-left: auto; flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(11, 11, 11, .07); font-size: 20px; line-height: 1; color: var(--ink-2); }
-.ed-x:hover { background: rgba(11, 11, 11, .14); }
+.ed-x { margin-left: auto; flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--shade-1); font-size: 20px; line-height: 1; color: var(--ink-2); }
+.ed-x:hover { background: var(--shade-2); }
 .ed-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 0; overflow: auto; min-height: 0; }
 .ed-side { padding: 16px 20px 20px; border-right: 1px solid var(--rule-2); display: flex; flex-direction: column; gap: 16px; }
 .ed-main { padding: 16px 22px 22px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .ed-grp h4 { margin: 0 0 7px; font: 600 10.5px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 .ed-opt-note { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--faint); margin-left: 6px; }
 .ed-opts { display: flex; flex-direction: column; gap: 6px; }
-.ed-opt { text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 9px 12px; border-radius: var(--r); border: 1px solid var(--rule-strong); background: rgba(255, 255, 255, .7); transition: border-color .12s, box-shadow .12s, background .12s; }
+.ed-opt { text-align: left; display: flex; flex-direction: column; gap: 1px; padding: 9px 12px; border-radius: var(--r); border: 1px solid var(--rule-strong); background: var(--ed-opt); transition: border-color .12s, box-shadow .12s, background .12s; }
 .ed-opt b { font-size: 13px; font-weight: 600; }
 .ed-opt small { font-size: 11.5px; color: var(--muted); }
-.ed-opt:hover { border-color: var(--faint); background: #fff; }
-.ed-opt.on { border-color: var(--ink); background: #fff; box-shadow: 0 0 0 1px var(--ink); }
+.ed-opt:hover { border-color: var(--faint); background: var(--ed-opt-on); }
+.ed-opt.on { border-color: var(--ink); background: var(--ed-opt-on); box-shadow: 0 0 0 1px var(--ink); }
 .ed-chk { display: flex; align-items: flex-start; gap: 9px; padding: 4px 0; font-size: 12.5px; cursor: pointer; }
 .ed-chk input { margin-top: 2px; accent-color: var(--ink); }
-.ed-grp select, .ed-grp input[type=text], .ed-grp textarea { width: 100%; padding: 7px 10px; border: 1px solid var(--rule-strong); border-radius: var(--r-sm); background: #fff; font-size: 12.5px; }
+.ed-grp select, .ed-grp input[type=text], .ed-grp textarea { width: 100%; padding: 7px 10px; border: 1px solid var(--rule-strong); border-radius: var(--r-sm); background: var(--ed-field); font-size: 12.5px; }
 .ed-grp textarea { font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: vertical; }
 .ed-grp .hint { margin: 5px 0 0; font-size: 11.5px; color: var(--muted); }
 .ed-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .ed-dl { margin-top: 0; }
-.ed-prev { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: #e9eaee; border: 1px solid var(--rule); }
+.ed-prev { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; background: var(--ed-prev); border: 1px solid var(--rule); }
 .ed-prev iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-.ed-busy { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; background: rgba(238, 240, 244, .9); color: var(--muted); font-size: 13px; }
+.ed-busy { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; background: var(--ed-busy); color: var(--muted); font-size: 13px; }
 .ed-busy[hidden] { display: none; }
-.ed-more { border: 1px solid var(--rule); border-radius: var(--r); background: rgba(255, 255, 255, .55); }
+.ed-more { border: 1px solid var(--rule); border-radius: var(--r); background: var(--ed-more); }
 .ed-more summary { padding: 9px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 .ed-more ol, .ed-more ul { margin: 0; padding: 0 14px 12px 32px; font-size: 12.5px; color: var(--ink-2); }
 .ed-more li { margin: 4px 0; }
@@ -663,10 +682,10 @@ body.embed.embed-nopanel .sheet { display: none !important; }
 body.embed .sheet { bottom: 8px; width: min(800px, calc(100% - 16px)); max-height: min(54%, 440px); border-radius: 18px; }
 body.embed .sheet-grip { display: flex; }
 .embed-bar { position: absolute; top: 8px; right: 8px; z-index: 25; max-width: calc(100% - 16px); display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.embed-bar > * { display: inline-flex; align-items: stretch; overflow: hidden; border-radius: 10px; background: var(--glass-strong); -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5); border: 1px solid var(--glass-line); box-shadow: 0 0 0 .5px rgba(11, 11, 11, .06), 0 4px 16px rgba(11, 11, 11, .10); }
+.embed-bar > * { display: inline-flex; align-items: stretch; overflow: hidden; border-radius: 10px; background: var(--glass-strong); -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5); border: 1px solid var(--glass-line); box-shadow: var(--glass-sh); }
 .embed-bar button { height: 28px; min-width: 30px; padding: 0 10px; border: 0; background: none; font: 600 12px var(--sans); color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
-.embed-bar button:hover { background: rgba(11, 11, 11, .07); color: var(--ink); }
-.embed-bar .eb-seg button.on { background: var(--ink); color: #fff; }
+.embed-bar button:hover { background: var(--shade-1); color: var(--ink); }
+.embed-bar .eb-seg button.on { background: var(--ink); color: var(--on-ink); }
 .embed-bar .eb-group button + button { border-left: 1px solid var(--rule-2); }
 @media (max-width: 760px), (max-height: 420px) { .embed-bar { top: 5px; right: 5px; gap: 4px; } .embed-bar > * { border-radius: 8px; } .embed-bar button { height: 24px; min-width: 24px; padding: 0 7px; font-size: 10.5px; } }
 
@@ -690,6 +709,222 @@ body.embed .sheet-grip { display: flex; }
 .towns-ctl .towns-style select { width: 100%; }
 .towns-ctl [hidden] { display: none !important; }
 .towns-ctl .towns-style .hint { font-size: 11px; color: var(--muted); line-height: 1.35; }
+
+/* =====================================================================
+   v4.7 · the interface in the dark
+   The page chrome only: panels, menus, buttons, the stage behind the boards. The drawings keep their own Theme (paper,
+   ink, accents), so a white poster sits on a dark stage unless you choose a dark preset in Theme.
+   html[data-ui="dark"] is set by js/ui/appearance.js (Auto follows the device).
+   ===================================================================== */
+html[data-ui="dark"] {
+  color-scheme: dark;
+  --page: #0b0c0f;
+  --canvas: #0f1013; --surface: #1a1b20; --surface-2: #212227; --surface-3: #2a2b32;
+  --ink: #f3f3f1; --ink-2: #dadad6; --muted: #a6a6a0; --faint: #8c8c86;
+  --rule: #2d2e35; --rule-2: #26272d; --rule-strong: #464750;
+  --accent: #ff4aa5; --accent-soft: rgba(255, 74, 165, .18); --accent-ring: rgba(255, 74, 165, .34);
+  --warn: #f2a54a; --err: #ff7d98; --ok: #3fcf9b;
+  --glass: rgba(26, 27, 32, .7); --glass-strong: rgba(26, 27, 32, .92); --glass-line: rgba(255, 255, 255, .09);
+  --sh-1: 0 1px 2px rgba(0, 0, 0, .45);
+  --sh-2: 0 1px 3px rgba(0, 0, 0, .5), 0 4px 14px rgba(0, 0, 0, .4);
+  --sh-3: 0 2px 6px rgba(0, 0, 0, .5), 0 16px 40px rgba(0, 0, 0, .6);
+  --on-ink: #0b0b0d;
+  --btn-bg: rgba(255, 255, 255, .06); --hover-wash: rgba(255, 255, 255, .09); --track: rgba(255, 255, 255, .07);
+  --shade-1: rgba(255, 255, 255, .09); --shade-2: rgba(255, 255, 255, .17); --grip: rgba(255, 255, 255, .3); --grip-h: rgba(255, 255, 255, .55);
+  --stage-fill: rgba(255, 255, 255, .03); --stage-line: rgba(255, 255, 255, .08); --stage-hi: rgba(255, 255, 255, .05);
+  --glass-sh: 0 0 0 .5px rgba(255, 255, 255, .05), 0 10px 32px rgba(0, 0, 0, .5);
+  --sheet-sh: 0 0 0 .5px rgba(255, 255, 255, .09), 0 24px 70px rgba(0, 0, 0, .7);
+  --primary-a: #ffffff; --primary-b: #d9d9de; --primary-ah: #ffffff; --primary-bh: #ececf0; --primary-hi: rgba(255, 255, 255, .7);
+  --wash: 15%; --wash-2: 13%;
+  --ed-opt: rgba(255, 255, 255, .05); --ed-opt-on: #2a2b32; --ed-field: #1a1b20; --ed-prev: #15161a; --ed-busy: rgba(15, 16, 19, .92); --ed-more: rgba(255, 255, 255, .04);
+  --warn-bg: #36290b; --warn-line: #6b5116; --warn-ink: #f4d78a; --over: rgba(255, 74, 165, .12);
+  --scrim: rgba(0, 0, 0, .6);
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23a6a6a0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+html[data-ui="dark"] .seg-nav button.active, html[data-ui="dark"] .seg button.on { background: var(--surface-3); box-shadow: var(--sh-1), 0 0 0 .5px rgba(255, 255, 255, .1); }
+html[data-ui="dark"] .poster-host, html[data-ui="dark"] .mm-host, html[data-ui="dark"] .anim-stage .board { box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 2px 4px rgba(0, 0, 0, .3), 0 18px 50px rgba(0, 0, 0, .55); }
+html[data-ui="dark"] body.embed .poster-host, html[data-ui="dark"] body.embed .mm-host { box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 6px 22px rgba(0, 0, 0, .5); }
+html[data-ui="dark"] .brand-mark { background: linear-gradient(180deg, var(--g3), var(--g1)); }
+html[data-ui="dark"] #btn-theme .sw { box-shadow: 0 0 0 1px rgba(255, 255, 255, .22); }
+html[data-ui="dark"] .sws, html[data-ui="dark"] .towns-ctl .town-ramp { box-shadow: 0 0 0 1px rgba(255, 255, 255, .16); }
+html[data-ui="dark"] .dot { border-color: var(--surface); }
+html[data-ui="dark"] .tooltip, html[data-ui="dark"] .toast { box-shadow: 0 0 0 1px rgba(255, 255, 255, .12), var(--sh-3); }
+html[data-ui="dark"] .toast.err { color: #fff; }
+html[data-ui="dark"] .table-note, html[data-ui="dark"] ::selection { background: var(--accent-soft); }
+
+/* the two controls that choose it */
+.appearance { display: flex; padding: 2px; gap: 2px; background: var(--surface-3); border-radius: var(--r); }
+.appearance button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 28px; border: 0; background: transparent; border-radius: var(--r-sm); padding: 0 8px; font-size: 12px; font-weight: 500; color: var(--ink-2); }
+.appearance button:hover { background: var(--hover-wash); }
+.appearance button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1), 0 0 0 .5px rgba(11, 11, 11, .08); }
+html[data-ui="dark"] .appearance button.on { background: var(--surface-3); box-shadow: var(--sh-1), 0 0 0 .5px rgba(255, 255, 255, .12); }
+.appearance svg { flex: none; }
+.th-ui { padding: 10px 16px 12px; border-bottom: 1px solid var(--rule-2); }
+.th-ui .lbl { margin: 0 0 6px; }
+.th-ui .hint { margin: 6px 0 0; }
+#btn-appearance .ic-sun { display: none; }
+html[data-ui="dark"] #btn-appearance .ic-sun { display: block; }
+html[data-ui="dark"] #btn-appearance .ic-moon { display: none; }
+
+/* =====================================================================
+   v4.7 · phones and touch
+   ≤ 900 px wide: one bar on top (view switch, settings, menu), the settings rise as a sheet from the bottom, the details
+   as a full-width sheet, menus and the Theme panel as cards under the bar, pinch and drag on the drawings.
+   ===================================================================== */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { height: 100vh; height: 100dvh; -webkit-tap-highlight-color: transparent; }
+#btn-more, .more-menu, .scrim, .sheet-done { display: none; }
+.poster-viewport { touch-action: none; }
+.mm-viewport { touch-action: pan-x pan-y; }
+body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          /* in a page a finger scrolls the page; two fingers zoom */
+.menu-list button[data-goto].on { background: var(--surface-3); font-weight: 600; }
+.mm-ledger, .view-table, .view-pictures, .view-checks, .view-mapping { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.more-menu .menu-list .appearance { margin: 2px 4px 8px; width: calc(100% - 8px); }
+
+@media (pointer: coarse) {
+  .btn { height: 38px; }
+  .btn.small { height: 32px; }
+  .tool { height: 36px; min-width: 36px; }
+  .icon-btn { width: 38px; height: 38px; }
+  .tabs button { height: 36px; }
+  .seg-nav button { height: 36px; }
+  .seg button, #sh-mid .seg button { height: 32px; }
+  .menu-list button { padding: 11px 12px; }
+  .section > summary { padding-top: 15px; padding-bottom: 15px; }
+  .check { margin: 9px 0; }
+  .check input { width: 20px; height: 20px; }
+  input[type=text], input[type=date], input[type=number], input[type=url], input[type=search], select { height: 40px; font-size: 16px; }
+  textarea { font-size: 16px; }
+  .cat-row input[type=text], .cat-row select, .per-row select, .imgs-row input.cr, .imgs-row input.url { font-size: 16px; height: 36px; }
+  .sheet-x { width: 38px; height: 38px; }
+  .sheet-grip { height: 28px; width: 96px; }
+  .dot { width: 28px; height: 28px; }
+  .towns-ctl .town-chip { width: 26px; height: 26px; }
+  .stage-hint { display: none !important; }
+  .imgs-row .acts { gap: 14px; }
+  /* a field under 16 px makes iOS zoom the whole page when it is focused */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]):not([type=submit]), textarea, select { font-size: 16px !important; }
+}
+
+@media (max-width: 900px) {
+  body { font-size: 14px; }
+  /* the bar: brand mark, view switch, settings, menu */
+  .topbar { height: 52px; margin: calc(6px + env(safe-area-inset-top)) 6px 0; gap: 8px; padding: 0 6px 0 12px; border-radius: 18px; }
+  .brand-txt { display: none; }
+  .brand-mark { height: 24px; }
+  .seg-nav { flex: 1; min-width: 0; padding: 3px; }
+  .seg-nav button { flex: 1; min-width: 0; padding: 0 4px; height: 36px; font-size: 13px; justify-content: center; }
+  .data-nav, .data-menu, .actions > .btn, .actions .menu > .btn, .actions .vr, #btn-appearance { display: none !important; }
+  .actions { margin-left: 0; gap: 2px; }
+  .actions .menu { display: contents; }
+  #btn-more { display: inline-flex; }
+  .more-menu { display: contents; }
+  #btn-left, #btn-more { width: 40px; height: 40px; }
+  body.no-left #btn-left { color: var(--muted); }
+  /* every menu, and the Theme panel, as a card under the bar */
+  .menu-list, .menu-list.menu-wide, .data-menu .menu-list { position: absolute; left: 0; right: 0; top: calc(100% + 8px); width: auto; min-width: 0; max-height: calc(100dvh - 132px - env(safe-area-inset-top)); border-radius: 20px; z-index: 80; padding: 8px; }          /* a strip stays free under it: a tap there closes it */
+  .menu-list, .menu-list.menu-wide { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }          /* inside the bar's own glass a second blur shows nothing behind it */
+  .menu-list button { padding: 12px 12px; font-size: 14px; }
+  .m-sub { font-size: 11.5px; color: var(--muted); }
+  .menu-h { color: var(--muted); }
+  .popover { left: 8px; right: 8px; top: calc(66px + env(safe-area-inset-top)); width: auto; max-height: calc(100dvh - 84px - env(safe-area-inset-top)); border-radius: 20px; z-index: 80; }
+  /* the work area */
+  .workspace { padding: 6px; gap: 0; }
+  .stage { gap: 6px; }
+  .stage-head { height: 46px; padding: 0 6px 0 14px; gap: 8px; border-radius: 16px; }
+  .stage-head .sh-title span, .stage-head .tool-note { display: none !important; }
+  body[data-screen="money"] .sh-title { display: none; }
+  .sh-tools { max-width: none; gap: 6px; }
+  .stage-main { border-radius: 18px; }
+  /* settings: a sheet from the bottom */
+  .controls { position: fixed; left: 6px; right: 6px; bottom: calc(6px + env(safe-area-inset-bottom)); width: auto; height: 68dvh; z-index: 45; border-radius: 22px; background: var(--glass-strong); box-shadow: var(--sheet-sh); transform: translateY(calc(100% + 30px)); visibility: hidden; transition: transform .28s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .28s; overscroll-behavior: contain; }
+  body:not(.no-left) .controls { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+  body.no-left:is([data-screen="poster"], [data-screen="animation"], [data-screen="money"], [data-screen="table"]) .controls { display: block; }
+  .scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); }
+  .sheet-done { position: fixed; right: 16px; bottom: calc(68dvh + 16px + env(safe-area-inset-bottom)); z-index: 46; height: 40px; padding: 0 20px; border-radius: 999px; border: 0; background: var(--ink); color: var(--on-ink); font: 600 14px var(--sans); box-shadow: var(--sh-3); }
+  body:not(.no-left):is([data-screen="poster"], [data-screen="animation"], [data-screen="money"], [data-screen="table"]) .scrim { display: block; }
+  body:not(.no-left):is([data-screen="poster"], [data-screen="animation"], [data-screen="money"], [data-screen="table"]) .sheet-done { display: inline-flex; align-items: center; }
+  .section .body { padding: 2px 16px 18px; }
+  .checklist { max-height: 220px; }
+  /* the details: a full-width sheet */
+  .sheet { left: 0; right: 0; bottom: 0; width: 100%; max-height: 62%; transform: none; border-radius: 22px 22px 0 0; border-left: 0; border-right: 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
+  body.detail-open .sheet { animation: sheet-in-m .26s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes sheet-in-m { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+  body.sheet-away .sheet { transform: translateY(calc(100% + 40px)); }
+  .sheet .d-head { padding: 22px 56px 10px 16px; }
+  .sheet .d-body { padding: 8px 16px 24px; }
+  .sheet .detail.mm-detail .dh { padding: 22px 56px 10px 16px; }
+  .sheet .detail.mm-detail .blk { padding-left: 16px; padding-right: 16px; }
+  .detail h3 { font-size: 18px; }
+  .kv { grid-template-columns: 92px 1fr; }
+  /* the drawings */
+  .anim-stage { padding: 8px; }
+  .mm-viewport { padding: 8px; }
+  .mm-ledger { padding: 12px 10px 40px; }
+  .ml-tools { flex-wrap: wrap; }
+  .ml-tools input[type=search] { margin-left: 0; width: 100%; }
+  #sh-mid .seg button { padding: 0 11px; font-size: 13px; }
+  /* data pages */
+  .pane { padding: 14px 12px 40px; }
+  .pane h2 { font-size: 21px; }
+  .sheet-card .grid { grid-template-columns: 1fr; padding: 12px; }
+  .sheet-card header { flex-wrap: wrap; padding: 12px; }
+  table.data { font-size: 12px; display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  table.data th { position: static; }
+  .check-item { grid-template-columns: 1fr; gap: 4px; }
+  /* dialogs */
+  .embed-dlg { padding: 0; align-items: flex-end; }
+  .ed-card { width: 100%; max-height: 94dvh; border-radius: 22px 22px 0 0; }
+  .ed-card > header { padding: 14px 16px 12px; }
+  .ed-side, .ed-main { padding: 14px 16px 18px; }
+  .toast { bottom: calc(14px + env(safe-area-inset-bottom)); max-width: calc(100vw - 24px); }
+}
+/* a page made by the Embed command, in a narrow frame: the details as a sheet from the bottom */
+@media (max-width: 640px) {
+  body.embed .sheet { bottom: 0; width: 100%; max-height: 58%; border-radius: 18px 18px 0 0; }
+  body.embed .stage-main { border-radius: 12px; }
+}
+
+@media (max-width: 400px) {
+  .seg-nav button { font-size: 12.5px; padding: 0 2px; }
+  .topbar { gap: 4px; padding-left: 10px; }
+  .brand-mark { width: 7px; }
+}
+
+/* a phone turned sideways: every pixel of height goes to the drawing */
+@media (max-height: 520px) and (orientation: landscape) {
+  .topbar { height: 42px; margin: 4px 6px 0; gap: 10px; border-radius: 14px; }
+  .brand-name { font-size: 13.5px; }
+  .brand-sub { display: none; }
+  .seg-nav button { height: 30px; }
+  .tabs button { height: 30px; }
+  .actions .btn, .tool { height: 30px; }
+  .icon-btn { width: 30px; height: 30px; }
+  .workspace { padding: 4px 6px 6px; gap: 6px; }
+  .stage { gap: 4px; }
+  .stage-head { height: 38px; border-radius: 12px; }
+  .stage-main { border-radius: 14px; }
+  .anim-stage { padding: 6px; }
+  .mm-viewport { padding: 6px; }
+  .sheet { max-height: 80%; }
+  .menu-list, .popover { max-height: calc(100dvh - 56px); }
+}
+@media (max-height: 520px) and (orientation: landscape) and (max-width: 1000px) {
+  .controls { width: 300px; }
+}
+@media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
+  .controls { top: 6px; height: auto; right: auto; width: min(380px, 62vw); }
+  .sheet-done { bottom: 16px; }
+  .sheet { max-height: 78%; }
+  .menu-list, .menu-list.menu-wide, .data-menu .menu-list { max-height: calc(100dvh - 60px); }
+  .topbar { margin-top: calc(4px + env(safe-area-inset-top)); }
+}
+
+/* a tablet in landscape with the settings open: the stage is narrow, so the Money tools sit closer together */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .stage-head { gap: 8px; padding: 0 10px 0 14px; }
+  .sh-tools { gap: 6px; }
+}
 
 </style>
 </head>
@@ -724,6 +959,7 @@ body.embed .sheet-grip { display: flex; }
     </div>
   </div>
   <div class="actions">
+    <button class="icon-btn" id="btn-appearance" aria-label="Switch between the light and the dark interface" title="Light or dark interface"><svg class="ic-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z"/></svg><svg class="ic-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="2.9"/><path d="M8 1.4v1.5M8 13.1v1.5M1.4 8h1.5M13.1 8h1.5M3.3 3.3l1 1M11.7 11.7l1 1M12.7 3.3l-1 1M4.3 11.7l-1 1"/></svg></button>
     <button class="btn" id="btn-theme" aria-haspopup="dialog" aria-expanded="false" title="Colours for every tab and every export"><span class="sw" aria-hidden="true"></span>Theme</button>
     <button class="btn" id="btn-present" title="Present the chronogram and the money map as a 16:9 slide show">Present</button>
     <div class="menu">
@@ -747,6 +983,23 @@ body.embed .sheet-grip { display: flex; }
       <div class="menu-list menu-wide" id="export-menu" hidden></div>
     </div>
     <span class="vr" aria-hidden="true"></span>
+    <div class="more-menu">
+      <button class="icon-btn" id="btn-more" aria-haspopup="true" aria-expanded="false" aria-label="More" title="Data, theme, present, import, export"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg></button>
+      <div class="menu-list" id="more-menu" hidden>
+        <div class="menu-h">Data</div>
+        <button data-goto="table">Table <span class="m-sub">every record</span></button>
+        <button data-goto="pictures">Pictures <span class="m-sub">events and places</span></button>
+        <button data-goto="checks">Checks <span class="m-sub"><span class="badge" id="checks-badge-m">0</span></span></button>
+        <button data-goto="mapping">Mapping <span class="m-sub">columns and sheets</span></button>
+        <div class="menu-h">Studio</div>
+        <button data-more="theme">Theme <span class="m-sub">colours of the drawings</span></button>
+        <button data-more="present">Present <span class="m-sub">16:9 slide show</span></button>
+        <button data-more="import">Import <span class="m-sub">workbook, ledger, pictures</span></button>
+        <button data-more="export">Export <span class="m-sub">images, video, pages</span></button>
+        <div class="menu-h">Interface</div>
+        <div id="more-appearance"></div>
+      </div>
+    </div>
     <button class="icon-btn on" id="btn-left" title="Show or hide the settings panel" aria-label="Settings panel" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M6 2.5v11"/></svg></button>
   </div>
   <input type="file" id="file-workbook" accept=".xlsx,.xlsm,.csv,.tsv" hidden>
@@ -807,11 +1060,13 @@ body.embed .sheet-grip { display: flex; }
 
 </main>
 
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<button class="sheet-done" id="controls-done" type="button">Done</button>
 <div class="tooltip" id="tooltip" hidden></div>
 <div class="toast" id="toast" hidden></div>
 
 <!-- the page as it was before any script ran: the Embed command builds stand-alone pages from it -->
-<script id="shell-mark">(function () { try { var me = document.currentScript; window.PCS_SHELL = document.documentElement.outerHTML.replace(me.outerHTML, ''); } catch (e) { /* embed pages cannot be built */ } })();</script>
+<script id="shell-mark">(function () { try { var me = document.currentScript; window.PCS_SHELL = document.documentElement.outerHTML.replace(me.outerHTML, '').replace(/<script id="ui-early">[\s\S]*?<\/script>/, ''); } catch (e) { /* embed pages cannot be built */ } })();</script>
 <!-- data & processing -->
 <script>/* js/core.js */
 /* =========================================================================
@@ -8921,11 +9176,37 @@ window.PCS.DEFAULT_LOCATIONS = [
   /** Fit: the whole 16:9 page in the window, in both directions; with a zoom set, 100 % = one pixel per unit of the 1920 x 1080 page. */
   function sizeHost() {
     var host = $('mm-host'), vp = $('mm-viewport'); if (!host || !vp) return;
-    var pad = EMB() ? 2 * PCS.embed.pad : 56, aw = Math.max(EMB() ? 120 : 480, vp.clientWidth - pad), ah = Math.max(EMB() ? 70 : 300, vp.clientHeight - pad);
+    var cs = root.getComputedStyle ? root.getComputedStyle(vp) : null, padX = EMB() ? 2 * PCS.embed.pad : (cs ? parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) : 56), padY = EMB() ? 2 * PCS.embed.pad : (cs ? parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) : 56);
+    var small = vp.clientWidth < 600;         // a phone: the whole page fits the width, and the fingers zoom
+    var aw = Math.max(EMB() ? 120 : small ? 200 : 480, vp.clientWidth - padX), ah = Math.max(EMB() ? 70 : small ? 120 : 300, vp.clientHeight - padY);
     var lw = (last && last.width) || 1920, lh = (last && last.height) || 1080, w;
     if (st.zoom) w = Math.round(lw * st.zoom);
     else w = Math.round(Math.min(aw, ah * lw / lh));
     host.style.width = w + 'px';
+  }
+  /** Two fingers zoom the page; the point between them stays between them. One finger scrolls as usual. */
+  function pinchZoom(vp) {
+    var ptrs = {}, pz = null, keep = '';
+    function pts() { return Object.keys(ptrs).map(function (k) { return ptrs[k]; }); }
+    vp.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'touch') return;
+      ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var p = pts(); if (p.length !== 2 || st.pane === 'ledger') return;
+      var hr = $('mm-host').getBoundingClientRect(), z0 = effectiveZoom();
+      pz = { d0: Math.max(10, Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y)), z0: z0, qx: ((p[0].x + p[1].x) / 2 - hr.left) / z0, qy: ((p[0].y + p[1].y) / 2 - hr.top) / z0 };
+      keep = vp.style.overflow; vp.style.overflow = 'hidden';
+    });
+    vp.addEventListener('pointermove', function (e) {
+      if (!ptrs[e.pointerId]) return;
+      ptrs[e.pointerId].x = e.clientX; ptrs[e.pointerId].y = e.clientY;
+      var p = pts(); if (!pz || p.length !== 2) return;
+      var z1 = U.clamp(pz.z0 * Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) / pz.d0, 0.3, 3), cx = (p[0].x + p[1].x) / 2, cy = (p[0].y + p[1].y) / 2;
+      st.zoom = z1; sizeHost();
+      var hr = $('mm-host').getBoundingClientRect();
+      vp.scrollLeft += hr.left + pz.qx * z1 - cx; vp.scrollTop += hr.top + pz.qy * z1 - cy;
+    });
+    function lift(e) { delete ptrs[e.pointerId]; if (pz && pts().length < 2) { pz = null; vp.style.overflow = keep; } }
+    vp.addEventListener('pointerup', lift); vp.addEventListener('pointercancel', lift);
   }
   function effectiveZoom() { return st.zoom || ($('mm-host').clientWidth / ((last && last.width) || 1920)); }
 
@@ -9378,6 +9659,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     document.querySelectorAll('#mm-seg button').forEach(function (b) { b.onclick = function () { setPane(b.getAttribute('data-pane')); }; });
     root.addEventListener('resize', function () { if (PCS.app.view === 'money' && !st.zoom) sizeHost(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && placing) stopPlacing(); });
+    pinchZoom($('mm-viewport'));
     $('mm-viewport').addEventListener('click', function (e) { if (e.target === $('mm-viewport')) { st.selected = null; applySelection(); drawDetail(); } });
     $('file-rules').onchange = async function (e) {
       var f = e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -9677,6 +9959,82 @@ window.PCS.DEFAULT_LOCATIONS = [
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
+<script>/* js/ui/appearance.js */
+/* =====================================================================
+   Poyo Chronogram Studio · the look of the interface: Auto (follows the device), Light or Dark.
+   It changes the panels, menus and buttons only. The drawings keep their own Theme.
+   html[data-ui="light|dark"] drives the CSS variables in css/app.css; an inline script in <head> sets it before the first paint.
+   ===================================================================== */
+(function (root) {
+  'use strict';
+  var PCS = root.PCS = root.PCS || {}, U = PCS.util, A = PCS.appearance = {};
+  var KEY = 'pcs.ui.appearance', MODES = ['auto', 'light', 'dark'];
+  var LABEL = { auto: 'Auto', light: 'Light', dark: 'Dark' };
+  var BAR = { light: '#eef0f4', dark: '#0b0c0f' };
+  var mode = 'auto', forced = null, mq = null, boxes = [];
+
+  function valid(m) { return MODES.indexOf(m) >= 0 ? m : 'auto'; }
+  function systemDark() { try { return !!(root.matchMedia && root.matchMedia('(prefers-color-scheme: dark)').matches); } catch (e) { return false; } }
+  A.modes = MODES.slice();
+  /** The choice that is in force: the one the person made, or the one an embedded page was given. */
+  A.mode = function () { return forced || mode; };
+  /** 'light' or 'dark', after Auto has been decided by the device. */
+  A.resolved = function () { var m = A.mode(); return m === 'dark' ? 'dark' : m === 'light' ? 'light' : (systemDark() ? 'dark' : 'light'); };
+
+  function sync() {
+    boxes = boxes.filter(function (b) { if (b.isConnected) b._seen = true; return b.isConnected || !b._seen; });          // forget the ones whose panel was rebuilt
+    boxes.forEach(function (b) {
+      Array.prototype.forEach.call(b.querySelectorAll('button'), function (x) { var on = x.getAttribute('data-mode') === A.mode(); x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+    });
+    var btn = document.getElementById('btn-appearance');
+    if (btn) { var d = A.resolved() === 'dark'; btn.title = d ? 'Switch to the light interface' : 'Switch to the dark interface'; btn.setAttribute('aria-label', btn.title); }
+  }
+  function apply() {
+    var r = A.resolved();
+    document.documentElement.setAttribute('data-ui', r);
+    var t = document.querySelector('meta[name="theme-color"]'); if (t) t.setAttribute('content', BAR[r]);
+    sync();
+    try { root.dispatchEvent(new root.CustomEvent('pcs-appearance', { detail: { mode: A.mode(), resolved: r } })); } catch (e) { /* old browser */ }
+  }
+  /** The person's choice; kept in this browser. */
+  A.set = function (m) { mode = valid(m); U.store.set(KEY, mode); apply(); };
+  /** An embedded page is told by its address (?ui=dark), and never reads or writes the host's storage. */
+  A.force = function (m) { forced = m === null || m === undefined || m === '' ? null : valid(String(m).toLowerCase()); apply(); };
+  A.toggle = function () { A.set(A.resolved() === 'dark' ? 'light' : 'dark'); };
+
+  var ICON = {
+    auto: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.6"/><path d="M8 2.4v11.2" /><path d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" fill="currentColor" stroke="none"/></svg>',
+    light: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="2.9"/><path d="M8 1.6v1.4M8 13v1.4M1.6 8H3M13 8h1.4M3.5 3.5l1 1M11.5 11.5l1 1M12.5 3.5l-1 1M4.5 11.5l-1 1"/></svg>',
+    dark: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z"/></svg>'
+  };
+  /** A three-way switch; every one that is built stays in step with the others. */
+  A.control = function () {
+    var box = document.createElement('div');
+    box.className = 'appearance'; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Interface appearance');
+    MODES.forEach(function (m) {
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-mode', m); b.innerHTML = ICON[m] + '<span>' + LABEL[m] + '</span>';
+      b.title = m === 'auto' ? 'Follow the light or dark setting of this device' : 'Always ' + m;
+      box.appendChild(b);
+    });
+    box.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('button[data-mode]'); if (b) { e.stopPropagation(); A.set(b.getAttribute('data-mode')); } });
+    boxes.push(box); sync();
+    return box;
+  };
+
+  A.init = function () {
+    mode = valid(U.store.get(KEY, 'auto'));
+    var btn = document.getElementById('btn-appearance'); if (btn) btn.onclick = function () { A.toggle(); };
+    var slot = document.getElementById('more-appearance'); if (slot && !slot.firstChild) slot.appendChild(A.control());
+    try {
+      mq = root.matchMedia('(prefers-color-scheme: dark)');
+      var on = function () { if (A.mode() === 'auto') apply(); };
+      if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on);
+    } catch (e) { /* no media queries */ }
+    apply();
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
 <script>/* js/ui/theme-ui.js */
 /* =========================================================================
    Theme: the one set of colour controls of the studio.
@@ -9883,6 +10241,11 @@ window.PCS.DEFAULT_LOCATIONS = [
     head.innerHTML = '<div><div class="pop-title">Theme</div><div class="pop-sub"><span id="th-name"></span></div></div><div class="pop-acts"><button class="btn small" id="th-reset" title="Back to the Riverscape colours">Reset</button><button class="icon-btn" id="th-close" aria-label="Close">×</button></div>';
     el.appendChild(head);
     el.appendChild(h('div', { class: 'pop-note' }, 'One set of colours for the whole studio: the chronogram, the animation, the money map, Present and every export.'));
+    if (PCS.appearance && !(PCS.embed && PCS.embed.on)) {
+      var ui = h('div', { class: 'th-ui' }, '<div class="lbl">Interface</div>'); ui.appendChild(PCS.appearance.control());
+      ui.appendChild(h('div', { class: 'hint' }, 'The panels and menus only. The drawings keep the colours chosen below.'));
+      el.appendChild(ui);
+    }
     document.body.appendChild(el);
     $('th-close').onclick = UI.close;
     $('th-reset').onclick = function () { cfg().poster.towns = ''; cfg().poster.townsStrength = 1; cfg().poster.townsStyle = ''; applyPreset('riverscape'); syncTowns(); };
@@ -9907,9 +10270,9 @@ window.PCS.DEFAULT_LOCATIONS = [
       var pre = e.target.getAttribute && e.target.getAttribute('data-preset');
       if (pre) { var g = gen(); g.base = pre.toUpperCase(); applyGen(g); draw(); }
     });
-    document.addEventListener('mousedown', function (e) {
+    document.addEventListener('pointerdown', function (e) {
       if (!isOpen) return;
-      if (el.contains(e.target) || (e.target.closest && e.target.closest('#btn-theme'))) return;
+      if (el.contains(e.target) || (e.target.closest && (e.target.closest('#btn-theme') || e.target.closest('#btn-more') || e.target.closest('#more-menu')))) return;
       UI.close();
     });
     document.addEventListener('keydown', function (e) { if (isOpen && e.key === 'Escape') { UI.close(); var b = $('btn-theme'); if (b) b.focus(); } });
@@ -10748,6 +11111,7 @@ window.PCS.DEFAULT_LOCATIONS = [
         tools   1 | 0                               zoom, fit and full-screen buttons
         switch  0 | 1                               buttons to move between the diagrams (on when no d is given)
         bg      glass | clear | paper | white | #rrggbb
+        ui      light | dark | auto                 the panels and buttons (default light; auto follows the visitor's device)
         select  12                                  open record № 12 (chronogram) or amount № 12 (money)
         pad     14                                  space around the diagram, in pixels
         wheel   0 | 1                               1 = the mouse wheel zooms (otherwise Ctrl / ⌘ + wheel)
@@ -10806,7 +11170,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     return {
       diagram: norm(q && (q.get('d') || q.get('diagram'))) || norm(b.diagram) || 'chronogram',
       panel: flag('panel', true), tools: flag('tools', true), 'switch': flag('switch', !named), wheel: flag('wheel', false),
-      bg: String(raw('bg') || 'glass'), select: String(raw('select') || ''),
+      bg: String(raw('bg') || 'glass'), ui: String(raw('ui') || 'light').toLowerCase(), select: String(raw('select') || ''),
       pad: isNaN(pad) ? 14 : U.clamp(pad, 0, 80),
       towns: String(q && q.get('towns') || ''), tint: q && q.get('tint') !== null && q.get('tint') !== '' ? parseFloat(q.get('tint')) : NaN,
       shading: String(q && q.get('shading') || '').toLowerCase()      // colour, strength and style of the town shading, for this frame only
@@ -10818,6 +11182,8 @@ window.PCS.DEFAULT_LOCATIONS = [
     document.documentElement.style.setProperty('--embed-pad', E.pad + 'px');
     document.body.classList.add('embed');
     if (!E.params.panel) document.body.classList.add('embed-nopanel');
+    if (E.params.wheel) document.body.classList.add('embed-wheel');
+    if (root.PCS && PCS.appearance) PCS.appearance.force(/^(dark|auto)$/.test(E.params.ui) ? E.params.ui : 'light');      // never the visitor's saved choice on the studio's own address
   }
   /** The mouse wheel zooms only with Ctrl / ⌘ (a pinch on a trackpad sends Ctrl), so that a slide or a page can still scroll past. */
   E.wheelZoom = function (e) { return !!(E.params && E.params.wheel) || e.ctrlKey || e.metaKey; };
@@ -11053,7 +11419,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     var scripts = [], list = Array.prototype.slice.call(document.scripts);
     for (i = 0; i < list.length; i++) {
       var s = list[i];
-      if (s.id === 'shell-mark' || s.id === 'pcs-embed-state') continue;
+      if (s.id === 'shell-mark' || s.id === 'pcs-embed-state' || s.id === 'ui-early') continue;
       if (s.src) {
         scripts.push('<script>/* ' + s.getAttribute('src') + ' */\n' + (await get(s.src)).replace(/<\/script/gi, '<\\/script') + '\n<\/script>');
       } else if (s.textContent.trim()) scripts.push('<script>' + s.textContent + '<\/script>');
@@ -11062,6 +11428,11 @@ window.PCS.DEFAULT_LOCATIONS = [
     return partsCache;
   }
   function pageTitle(o) { return 'Poyo Basin: ' + DIAGRAMS[o.diagram].label; }
+  /** Runs in the page's head: light unless the address (or the page's own setting) says dark or auto. */
+  function EARLY(def) {
+    var d = /^(dark|auto)$/.test(def || '') ? def : 'light';
+    return '<script id="ui-early">(function () { try { var m = (new URLSearchParams(location.search).get("ui") || "' + d + '").toLowerCase(); var d = m === "dark" || (m === "auto" && matchMedia("(prefers-color-scheme: dark)").matches); document.documentElement.setAttribute("data-ui", d ? "dark" : "light"); var t = document.querySelector(\'meta[name="theme-color"]\'); if (t) t.setAttribute("content", d ? "#0b0c0f" : "#eef0f4"); } catch (e) { } })();<\/script>';
+  }
   /** The page: shell, baked state, scripts. o = { diagram, panel, tools, switch, bg }. */
   function assemble(P, state, o, full) {
     var title = pageTitle(o);
@@ -11069,8 +11440,9 @@ window.PCS.DEFAULT_LOCATIONS = [
       .replace(/<html[^>]*>/i, function () { return '<html lang="en" class="is-embed">'; })
       .replace(/<body[^>]*>/i, function () { return '<body class="embed" data-screen="poster">'; })
       .replace(/<title>[\s\S]*?<\/title>/i, function () { return '<title>' + esc(title) + '</title>'; })
+      .replace(/<\/head>/i, function () { return EARLY(full ? o.ui : '') + '\n</head>'; })
       .replace(/<meta name="description"[^>]*>/i, function () { return '<meta name="description" content="' + esc(title + ': an interactive diagram of the Poyo Basin after the DANA flood of 29 October 2024.') + '">'; });
-    var data = { v: 1, built: new Date().toISOString(), title: 'Poyo Basin', opts: full ? { diagram: o.diagram, panel: o.panel, tools: o.tools, 'switch': o['switch'], bg: o.bg } : { diagram: o.diagram }, store: state.store, images: state.images };
+    var data = { v: 1, built: new Date().toISOString(), title: 'Poyo Basin', opts: full ? { diagram: o.diagram, panel: o.panel, tools: o.tools, 'switch': o['switch'], bg: o.bg, ui: o.ui } : { diagram: o.diagram }, store: state.store, images: state.images };
     var json = JSON.stringify(data).replace(/</g, '\\u003c').replace(new RegExp('[\\u2028\\u2029]', 'g'), function (c) { return c === '\u2028' ? '\\u2028' : '\\u2029'; });
     return '<!doctype html>\n' + head + '\n<script id="pcs-embed-state">window.PCS_EMBED=' + json + ';<\/script>\n' + P.scripts.join('\n') + '\n</body>\n</html>\n';
   }
@@ -11090,6 +11462,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     if (!o.tools) q.push('tools=0');
     if (o['switch']) q.push('switch=1');
     if (o.bg && o.bg !== 'glass') q.push('bg=' + encodeURIComponent(o.bg));
+    if (o.ui && o.ui !== 'light') q.push('ui=' + encodeURIComponent(o.ui));
     return q.join('&');
   }
   E.address = function (o, base) { return (cleanBase(base) || PLACEHOLDER) + '?' + query(o); };
@@ -11135,6 +11508,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     '| `tools` | `1` (default), `0` | zoom, fit and full-screen buttons |',
     '| `switch` | `0` (default when `d` is given), `1` | buttons to move between the diagrams (on when there is no `d`) |',
     '| `bg` | `glass` (default), `clear`, `paper`, `white`, a colour such as `f4efe6` | background; `clear` lets the slide or page show through |',
+    '| `ui` | `light` (default), `dark`, `auto` | the panels and buttons of the page; `auto` follows the visitor\'s device. The drawings keep the colours of the theme |',
     '| `select` | a number, e.g. `12`; for `actors` a card ID such as `A005` | opens record № 12 (chronogram) or amount № 12 (money) at the start |',
     '| `pad` | `0`–`80` (default 14) | space around the diagram in pixels |',
     '| `wheel` | `0` (default), `1` | `1` = the mouse wheel zooms; otherwise Ctrl / ⌘ + wheel, so the page around can still scroll |',
@@ -11198,7 +11572,7 @@ window.PCS.DEFAULT_LOCATIONS = [
 
   /* ---------------- the dialog ----------------------------------------------------------------------------- */
   var dlg = null, dstate = null, prevTimer = null, prevToken = 0;
-  var DEF = { diagram: 'chronogram', panel: true, tools: true, 'switch': false, bg: 'glass', frame: 'fluid', base: '' };
+  var DEF = { diagram: 'chronogram', panel: true, tools: true, 'switch': false, bg: 'glass', ui: 'light', frame: 'fluid', base: '' };
   function currentOpts() { return Object.assign({}, DEF, U.store.get('pcs.ui.embed', {}) || {}); }
 
   E.open = async function (which) {
@@ -11219,6 +11593,7 @@ window.PCS.DEFAULT_LOCATIONS = [
       '<label class="ed-chk"><input type="checkbox" id="ed-tools"><span>Zoom, fit and full-screen buttons</span></label>' +
       '<label class="ed-chk"><input type="checkbox" id="ed-switch"><span>Buttons to switch between the diagrams</span></label></div>' +
       '<div class="ed-grp"><h4>Background</h4><select id="ed-bg"><option value="glass">Studio glass (the theme’s gradient)</option><option value="clear">Transparent (the slide or page shows through)</option><option value="paper">Paper colour of the theme</option><option value="white">White</option></select></div>' +
+      '<div class="ed-grp"><h4>Panels and buttons</h4><select id="ed-ui"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">Follow the visitor’s device</option></select></div>' +
       '<div class="ed-grp"><h4>Frame in the code</h4><select id="ed-frame"><option value="fluid">Fills the width, 16 : 9</option><option value="1280">Fixed 1280 × 720</option><option value="960">Fixed 960 × 540</option></select></div>' +
       '</div><div class="ed-main"><div class="ed-prev" id="ed-prev"><div class="ed-busy" id="ed-busy">Preparing the preview…</div></div>' +
       '<div class="ed-grp"><h4>Code to paste</h4><textarea id="ed-code" rows="3" readonly spellcheck="false"></textarea>' +
@@ -11241,7 +11616,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     document.body.appendChild(dlg);
     var q = function (id) { return dlg.querySelector('#' + id); };
     function readOpts() {
-      return { diagram: o.diagram, panel: q('ed-panel').checked, tools: q('ed-tools').checked, 'switch': q('ed-switch').checked, bg: q('ed-bg').value, frame: q('ed-frame').value, base: q('ed-url').value.trim() };
+      return { diagram: o.diagram, panel: q('ed-panel').checked, tools: q('ed-tools').checked, 'switch': q('ed-switch').checked, bg: q('ed-bg').value, ui: q('ed-ui').value, frame: q('ed-frame').value, base: q('ed-url').value.trim() };
     }
     function paintCode() { var c = readOpts(); q('ed-code').value = E.iframeCode(c, c.base); }
     function paintOpts() { dlg.querySelectorAll('.ed-opt').forEach(function (b) { var on = b.getAttribute('data-d') === o.diagram; b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); }); }
@@ -11258,9 +11633,9 @@ window.PCS.DEFAULT_LOCATIONS = [
       } catch (err) { console.error(err); busy.textContent = 'The preview could not be made: ' + err.message; }
     }
     function changed(reload) { o = Object.assign(o, { diagram: o.diagram }); paintOpts(); paintCode(); save(); if (reload) { clearTimeout(prevTimer); prevTimer = setTimeout(preview, 280); } }
-    q('ed-panel').checked = !!o.panel; q('ed-tools').checked = !!o.tools; q('ed-switch').checked = !!o['switch']; q('ed-bg').value = o.bg; q('ed-frame').value = o.frame; q('ed-url').value = o.base || '';
+    q('ed-panel').checked = !!o.panel; q('ed-tools').checked = !!o.tools; q('ed-switch').checked = !!o['switch']; q('ed-bg').value = o.bg; q('ed-ui').value = o.ui || 'light'; q('ed-frame').value = o.frame; q('ed-url').value = o.base || '';
     dlg.querySelectorAll('.ed-opt').forEach(function (b) { b.onclick = function () { o.diagram = b.getAttribute('data-d'); changed(true); }; });
-    ['ed-panel', 'ed-tools', 'ed-switch', 'ed-bg'].forEach(function (id) { q(id).onchange = function () { changed(true); }; });
+    ['ed-panel', 'ed-tools', 'ed-switch', 'ed-bg', 'ed-ui'].forEach(function (id) { q(id).onchange = function () { changed(true); }; });
     q('ed-frame').onchange = function () { changed(false); };
     q('ed-url').oninput = function () { changed(false); };
     function copy(text, msg) {
@@ -11467,7 +11842,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     if (!app.model) return;
     renderPoster();
     var nW = app.model.warnings.filter(function (w) { return w.level !== 'info'; }).length;
-    $('checks-badge').textContent = nW;
+    $('checks-badge').textContent = nW; if ($('checks-badge-m')) $('checks-badge-m').textContent = nW;
     if (app.view === 'table') PCS.panels.table();
     if (app.view === 'checks') PCS.panels.checks();
     if (app.view === 'mapping') PCS.panels.mapping();
@@ -11569,6 +11944,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     var vp = $('viewport'), info = app.lastInfo;
     if (!info) return;
     // the page fills the stage in both directions, centred, with the same margin as the animation and the money map
+    if (app.fitMode === 'circle') { zoomToCircle(); app.fitted = true; return; }       // a phone opens on the circle: the whole 16:9 page would be too small to read
     var pad = PCS.embed && PCS.embed.on ? PCS.embed.pad : 28;
     var k = Math.min((vp.clientWidth - 2 * pad) / info.W, (vp.clientHeight - 2 * pad) / info.H);
     app.zoom = { k: k, x: (vp.clientWidth - info.W * k) / 2, y: (vp.clientHeight - info.H * k) / 2 };
@@ -11597,20 +11973,46 @@ window.PCS.DEFAULT_LOCATIONS = [
       var r = vp.getBoundingClientRect();
       zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top);
     }, { passive: false });
+    // one finger drags and taps, two fingers pinch and drag together; a mouse drags and clicks
+    var ptrs = {}, pinch = null, noTap = false;
+    function pts() { return Object.keys(ptrs).map(function (k) { return ptrs[k]; }); }
     vp.addEventListener('pointerdown', function (e) {
-      if (e.button !== 0) return;
-      drag = { x: e.clientX, y: e.clientY, zx: app.zoom.x, zy: app.zoom.y, moved: false };
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var p = pts();
+      if (p.length === 2) {
+        var r = vp.getBoundingClientRect();
+        pinch = { d0: Math.max(10, Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y)), z0: { k: app.zoom.k, x: app.zoom.x, y: app.zoom.y }, cx: (p[0].x + p[1].x) / 2 - r.left, cy: (p[0].y + p[1].y) / 2 - r.top };
+        drag = null; noTap = true; vp.classList.remove('dragging'); tt.hidden = true;
+      } else if (p.length === 1) {
+        noTap = false;
+        drag = { x: e.clientX, y: e.clientY, zx: app.zoom.x, zy: app.zoom.y, moved: false, lim: e.pointerType === 'mouse' ? 4 : 9 };
+      } else drag = null;
     });
+    var tt = $('tooltip');
     window.addEventListener('pointermove', function (e) {
+      if (ptrs[e.pointerId]) { ptrs[e.pointerId].x = e.clientX; ptrs[e.pointerId].y = e.clientY; }
+      if (pinch) {
+        var p = pts();
+        if (p.length === 2) {
+          var r = vp.getBoundingClientRect(), z = pinch.z0, d1 = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+          var c1x = (p[0].x + p[1].x) / 2 - r.left, c1y = (p[0].y + p[1].y) / 2 - r.top;
+          var k1 = U.clamp(z.k * d1 / pinch.d0, 0.05, 4), qx = (pinch.cx - z.x) / z.k, qy = (pinch.cy - z.y) / z.k;
+          app.zoom.k = k1; app.zoom.x = c1x - qx * k1; app.zoom.y = c1y - qy * k1; app.fitted = false; applyZoom();
+        }
+        return;
+      }
       if (drag) {
         var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-        if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 4) { drag.moved = true; vp.classList.add('dragging'); }
+        if (!drag.moved && Math.abs(dx) + Math.abs(dy) > drag.lim) { drag.moved = true; vp.classList.add('dragging'); }
         if (drag.moved) { app.zoom.x = drag.zx + dx; app.zoom.y = drag.zy + dy; app.fitted = false; applyZoom(); }
       }
-      tooltip(e);
+      if (e.pointerType === 'touch') tt.hidden = true; else tooltip(e);        // a fingertip has no hover; the tap opens the details instead
     });
-    window.addEventListener('pointerup', function (e) {
-      if (drag && !drag.moved && vp.contains(e.target)) {
+    function lift(e) {
+      var wasTap = drag && !drag.moved && !noTap && e.type === 'pointerup' && vp.contains(e.target);
+      delete ptrs[e.pointerId];
+      if (wasTap) {
         var t = e.target.closest && e.target.closest('[data-id]');
         var mun = !t && e.target.closest && e.target.closest('[data-mun]');
         var act = !t && !mun && e.target.closest && e.target.closest('[data-actor]');
@@ -11618,8 +12020,13 @@ window.PCS.DEFAULT_LOCATIONS = [
         else if (mun) app.selectMunicipality(mun.getAttribute('data-mun'));
         else app.select(t ? t.getAttribute('data-id') : null);
       }
+      var left = pts().length;
+      if (left < 2) pinch = null;
+      if (left === 0) noTap = false;
       drag = null; vp.classList.remove('dragging');
-    });
+    }
+    window.addEventListener('pointerup', lift);
+    window.addEventListener('pointercancel', lift);
     // one zoom control for the whole stage: it acts on the drawing that is open
     app.zoomCmd = function (cmd) {
       if (app.view === 'money') { if (PCS.moneyMap) PCS.moneyMap.zoomCmd(cmd); return; }
@@ -11627,11 +12034,14 @@ window.PCS.DEFAULT_LOCATIONS = [
       if (cmd === 'fit') fit(); else if (cmd === 'ring') zoomToCircle();
       else zoomAt(cmd === 'in' ? 1.25 : 0.8, vp.clientWidth / 2, vp.clientHeight / 2);
     };
-    $('zoom-fit').onclick = function () { app.zoomCmd('fit'); };
+    $('zoom-fit').onclick = function () { app.fitMode = 'board'; app.zoomCmd('fit'); };
     $('zoom-in').onclick = function () { app.zoomCmd('in'); };
     $('zoom-out').onclick = function () { app.zoomCmd('out'); };
-    $('zoom-ring').onclick = function () { app.zoomCmd('ring'); };
-    window.addEventListener('resize', function () { if (app.view === 'poster') fit(); });
+    $('zoom-ring').onclick = function () { app.fitMode = 'circle'; app.zoomCmd('ring'); app.fitted = true; };
+    // a phone's address bar and keyboard resize the window all the time: do not undo the person's own zoom for that
+    var phoneMq = root.matchMedia ? root.matchMedia('(max-width: 900px)') : { matches: false };
+    if (phoneMq.matches && !(PCS.embed && PCS.embed.on) && window.innerHeight > window.innerWidth) app.fitMode = 'circle';
+    window.addEventListener('resize', function () { if (app.view === 'poster' && !(phoneMq.matches && app.fitted === false)) fit(); });
   }
 
   /* ---------------- tooltip --------------------------------------------- */
@@ -11665,7 +12075,9 @@ window.PCS.DEFAULT_LOCATIONS = [
     $('sh-name').textContent = { poster: 'Chronogram', animation: 'Animation', money: 'Money' }[v] || '';
     ['zoom-in', 'zoom-fit', 'zoom-out'].forEach(function (id) { $(id).disabled = false; });
     document.querySelectorAll('.tabs button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === v); });
-    var onData = ['table', 'pictures', 'checks', 'mapping'].indexOf(v) >= 0; $('btn-data').classList.toggle('on', onData);
+    var onData = ['table', 'pictures', 'checks', 'mapping'].indexOf(v) >= 0; $('btn-data').classList.toggle('on', onData); $('btn-more').classList.toggle('on', onData);
+    document.querySelectorAll('#more-menu [data-goto]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-goto') === v); });
+    app.closeSheetPhone && app.closeSheetPhone();
     document.querySelectorAll('.view').forEach(function (el) { el.classList.toggle('active', el.id === 'view-' + v); });
     if (app.model) PCS.panels.controls();          // the Money tab has its own controls
     app.renderViews();
@@ -11741,8 +12153,11 @@ window.PCS.DEFAULT_LOCATIONS = [
     $('btn-present').onclick = function () { PCS.present.open(); };
     $('btn-theme').onclick = function () { PCS.themeUI.toggle(); };
     PCS.themeUI.button();
+    if (PCS.appearance) PCS.appearance.init();
     // canvas first: the settings panel can be hidden; the details open as a floating sheet when something is selected
+    var phone = root.matchMedia ? root.matchMedia('(max-width: 900px)') : { matches: false };
     var ui = U.store.get('pcs.ui.panels3', { left: window.innerWidth > 1000, peek: false });   // a small window starts with the stage alone
+    if (phone.matches) ui.left = false;                                                         // on a phone the settings are a sheet, closed until asked for
     function panels() {
       document.body.classList.toggle('no-left', !ui.left); document.body.classList.toggle('sheet-peek', !!ui.peek);
       var el = $('btn-left'); el.classList.toggle('on', !!ui.left); el.setAttribute('aria-pressed', ui.left ? 'true' : 'false');
@@ -11750,12 +12165,15 @@ window.PCS.DEFAULT_LOCATIONS = [
     }
     function save() { U.store.set('pcs.ui.panels3', ui); panels(); }
     $('btn-left').onclick = function () { ui.left = !ui.left; save(); window.dispatchEvent(new Event('resize')); };
+    $('scrim').onclick = $('controls-done').onclick = function () { if (ui.left) { ui.left = false; save(); window.dispatchEvent(new Event('resize')); } };
+    app.closeSheetPhone = function () { if (phone.matches && ui.left) { ui.left = false; panels(); } };
+    if (phone.addEventListener) phone.addEventListener('change', function (e) { if (e.matches && ui.left) { ui.left = false; panels(); } });
     $('sheet-grip').onclick = function () { ui.peek = !ui.peek; save(); };
     $('sheet-x').onclick = function () { app.closeDetail(); };
     panels();
     new MutationObserver(function () { document.body.classList.toggle('detail-open', !$('detail').hidden); }).observe($('detail'), { attributes: true, attributeFilter: ['hidden'] });
     // two menus, one place for every way in and every way out
-    var menus = [['btn-data', 'data-menu'], ['btn-import', 'import-menu'], ['btn-export', 'export-menu']];
+    var menus = [['btn-data', 'data-menu'], ['btn-import', 'import-menu'], ['btn-export', 'export-menu'], ['btn-more', 'more-menu']];
     function closeMenus() { menus.forEach(function (m) { $(m[1]).hidden = true; $(m[0]).setAttribute('aria-expanded', 'false'); }); }
     app.closeMenus = closeMenus;
     menus.forEach(function (m) {
@@ -11766,6 +12184,17 @@ window.PCS.DEFAULT_LOCATIONS = [
     });
     document.addEventListener('click', closeMenus);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenus(); });
+    // the same commands in one list for a phone: tapping one closes the list, then does the thing (Import and Export open their own list)
+    $('more-menu').onclick = function (e) {
+      var g = e.target.closest('button[data-goto]'), m = e.target.closest('button[data-more]');
+      if (g) { closeMenus(); app.setView(g.getAttribute('data-goto')); return; }
+      if (!m) return;
+      e.stopPropagation(); closeMenus();
+      var what = m.getAttribute('data-more');
+      if (what === 'theme') PCS.themeUI.toggle();
+      else if (what === 'present') PCS.present.open();
+      else if (what === 'import' || what === 'export') $('btn-' + what).click();
+    };
     $('data-menu').onclick = function (e) { var b = e.target.closest('button[data-goto]'); if (b) { closeMenus(); app.setView(b.getAttribute('data-goto')); } };
     $('import-menu').onclick = function (e) { var b = e.target.closest('button[data-import]'); if (b) { closeMenus(); doImport(b.getAttribute('data-import')); } };
     $('export-menu').onclick = function (e) { var b = e.target.closest('button[data-export]'); if (b) { closeMenus(); doExport(b.getAttribute('data-export')); } };

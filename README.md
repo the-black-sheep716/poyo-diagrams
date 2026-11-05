@@ -30,6 +30,7 @@ One page serves all four diagrams; the address decides which one opens:
 | `tools` | `1` (default), `0` | zoom, fit and full-screen buttons |
 | `switch` | `0` (default when `d` is given), `1` | buttons to move between the diagrams (on when there is no `d`) |
 | `bg` | `glass` (default), `clear`, `paper`, `white`, a colour such as `f4efe6` | background; `clear` lets the slide or page show through |
+| `ui` | `light` (default), `dark`, `auto` | the panels and buttons of the page; `auto` follows the visitor's device. The drawings keep the colours of the theme |
 | `select` | a number, e.g. `12`; for `actors` a card ID such as `A005` | opens record № 12 (chronogram) or amount № 12 (money) at the start |
 | `pad` | `0`–`80` (default 14) | space around the diagram in pixels |
 | `wheel` | `0` (default), `1` | `1` = the mouse wheel zooms; otherwise Ctrl / ⌘ + wheel, so the page around can still scroll |

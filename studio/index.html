@@ -1366,6 +1366,8 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       description: 'The Poyo Basin (Barranco del Poyo, Valencia) before and after the DANA flood of 29 October 2024',
       legend: true, legendSize: 1, legendCats: true, legendReading: true, legendPeriods: true, legendMap: true,
       size: '1920x1080', fps: 30, videoFormat: 'mp4', mp4Quality: 'standard', gifSize: '960x540', gifFps: 10 },
+    // print figure (js/viz/print.js): a square drawing and a tall legend sheet in real millimetres, for a fixed place on a printed sheet
+    print: { mm: 320, legendW: 160, legendH: 320, labels: 'radial', labelMm: 40, axisMm: 240, scale: 'overview', pictures: true, pictureMm: 12, skip: 'Temporary Public Space Repair', unit: 0.2, type: 1.2, title: false, keys: false, text: 'auto', paper: 'clear' },
     chart: { measure: 'monthly', log: false, range: 'circle' },
     money: { title: '', subtitle: '', groupBy: 'status', showLinks: true, showReimb: true, showWorkbook: false, showMap: true, mapShade: '', mapMarks: true, page: 'a', series: '', filters: { phases: [], tiers: [], statuses: [], logics: [] } },
     ledgerEdits: {},
@@ -3615,6 +3617,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       (B.labels || []).forEach(function (lb) {
         var x = P.x(lb.xy[0]), y = P.y(lb.xy[1]);
         if (Math.hypot(x - o.cx, y - o.cy) > o.R - 14 * fs) return;
+        if (o.fitLabels && Math.hypot(x - o.cx, y - o.cy) + U.measure(lb.text, U.font('Inter', 11.5 * fs, 500, 'italic')) / 2 > o.R - 3) return;      // print: not cut by the edge of the map
         s.push('<text transform="translate(' + f(x) + ' ' + f(y) + ') rotate(' + (lb.rot || 0) + ')" text-anchor="middle" dy="0.35em" font-family="' + o.famS + '" font-style="italic" font-weight="500" font-size="' + f(11.5 * fs) + '" letter-spacing="' + f(lb.kind === 'sea' ? 2.2 * fs : 0.4 * fs) + '" fill="' + U.color.on(C.water, C.ink, C.bg) + '">' + esc(lb.text) + '</text>');
       });
       s.push('</g>');
@@ -3632,6 +3635,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         if (Math.hypot(x - o.cx, y - o.cy) > o.R - 30 * fs) return;
         var w = U.measure(p.name, U.font('Inter', 10.5 * fs, 500)) + 8;
         var box = [x + 4, y - 8 * fs, x + 4 + w, y + 4 * fs];
+        if (o.fitLabels && [[box[0], box[1]], [box[2], box[1]], [box[0], box[3]], [box[2], box[3]]].some(function (c) { return Math.hypot(c[0] - o.cx, c[1] - o.cy) > o.R - 3; })) return;      // print: a name that would be cut by the edge of the map is left out
         if (placed.some(function (b) { return box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]; })) return;
         placed.push(box);
         s.push('<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f(2 * fs) + '" fill="' + C.ink + '"/>' +
@@ -4027,8 +4031,9 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
   }
 
   /** The page is one size, 16 : 9. The animation's stage alone (mode 'stage') is square. */
-  function posterSize(stageOnly) {
+  function posterSize(stageOnly, print) {
     var F = PCS.frame;
+    if (print) return { W: print.W, H: print.H, wmm: print.mm, hmm: print.mm };          // the print figure: 1 unit = print.unit millimetres
     return stageOnly ? { W: 2400, H: 2400, wmm: 1000, hmm: 1000 } : { W: F.W, H: F.H, wmm: F.WMM, hmm: F.HMM };
   }
   P.size = function () { return posterSize(false); };
@@ -4080,12 +4085,16 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
      ===================================================================== */
   P.render = function (model, config, opts) {
     opts = opts || {};
-    var X = !opts.forExport; // interactive attributes on?
     var da = function (k, v) { return X ? ' data-' + k + '="' + esc(v) + '"' : ''; };
     var pc = config.poster, fs = +pc.fontScale || 1;
     // The page is always the 16:9 frame (rail | square stage | panel). The animation asks for the stage alone (opts.mode === 'stage').
-    var stageOnly = opts.mode === 'stage', F = PCS.frame;
-    var sz = posterSize(stageOnly), W = sz.W, H = sz.H, m = stageOnly ? (+pc.margin || 50) : 50, u = H / 1080;
+    // The print figure (opts.mode === 'print', see js/viz/print.js) is the stage alone too, drawn in real millimetres: opts.print = { mm, unit, W, H, fs, margin }.
+    var printMode = opts.mode === 'print', PR = printMode ? opts.print : null;
+    var radial = printMode && PR.labels === 'radial';      // print figure: each label runs along the radius from its own record, with no leader to a column
+    if (printMode) { fs = +PR.fs || 1.2; opts.forExport = true; }
+    var X = !opts.forExport; // interactive attributes on? (never in print)
+    var stageOnly = opts.mode === 'stage' || printMode, F = PCS.frame;
+    var sz = posterSize(stageOnly, PR), W = sz.W, H = sz.H, m = printMode ? (+PR.margin || 10) : stageOnly ? (+pc.margin || 50) : 50, u = H / 1080;
     var G = stageOnly ? null : F.geom(W, H);
     var LX0 = stageOnly ? m : G.SX + m, LW = stageOnly ? W - 2 * m : G.Sq - 2 * m;     // where the circle and its labels live
     var C = P.palette(config);
@@ -4115,7 +4124,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       info.offRange = []; info.annotated = []; info.unannotated = []; info.overflow = 0;
       return { svg: '', inner: [] };
     };
-    var circle = mkCircle(m + 10, H - m - 20);
+    var circle = printMode && +PR.zoneTop >= 0 ? mkCircle(+PR.zoneTop, +PR.zoneBottom) : mkCircle(m + 10, H - m - 20);
     info.legend = legendModel(circle.inner);       // the legend as data: the rail draws it here, the animation draws it on its canvas
     info.parts = { land: true, stage: stageOnly };
 
@@ -4229,10 +4238,14 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     function layoutCircle(zoneTop, zoneBottom) {
       var s = [];
       var colW = 268, gutter = 52;   // the gutter is the lane the leaders curve through
+      if (printMode) { colW = radial ? 0 : printColW(); gutter = radial ? 0 : 30 * fs; }      // the print figure's labels are two short lines: a narrow column, a short gutter (none when the labels run along the radius)
       var zoneH = zoneBottom - zoneTop;
       var Rout = Math.min((LW - 2 * colW - 2 * gutter) / 2, zoneH / 2 - 26);
+      if (radial && +PR.Rout > 0) Rout = +PR.Rout;
       var cx = LX0 + LW / 2, cy = zoneTop + zoneH / 2;
-      var laneStep = 12 * fs, dotS = 11 * fs, minArc = 12 * fs, lanePad = 15 * fs;
+      if (radial && +PR.cx > 0) cx = +PR.cx;
+      if (radial && +PR.cy > 0) cy = +PR.cy;
+      var laneStep = (radial ? 8 : 12) * fs, dotS = (radial ? 7.6 : 11) * fs, minArc = (radial ? 8.6 : 12) * fs, lanePad = (radial ? 6 : 15) * fs;
 
       // ---- events in range ----
       var evs = [];
@@ -4244,8 +4257,9 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         evs.push({ e: e, angle: sc.toAngle(e.date.start), seq: e.seq });
       });
       // lanes: iterate because the lane radius depends on the axis radius
-      var Raxis = Rout - 90, nl = 0, Re = 0;
-      for (var it = 0; it < 3; it++) {
+      var Raxis = Rout - 90, nl = 0, Re = 0, fixedAxis = radial && +PR.Raxis > 0;
+      if (fixedAxis) Raxis = +PR.Raxis;
+      for (var it = 0; it < 3 && !fixedAxis; it++) {
         nl = L.lanes(evs, Raxis + lanePad, laneStep, minArc);
         var Rnew = Rout - (lanePad + Math.max(1, nl) * laneStep + lanePad);
         if (Math.abs(Rnew - Raxis) < 1) break;
@@ -4253,10 +4267,11 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       }
       nl = L.lanes(evs, Raxis + lanePad, laneStep, minArc);
       Re = Raxis + lanePad + Math.max(1, nl) * laneStep + 4 * fs;  // elbow radius for leaders
+      if (fixedAxis) Rout = Re;      // the labels of the print figure start beyond the last lane
 
       // ---- periods geometry ----
       var rangeEnd = sc.end;
-      var per = model.periods.filter(function (p) { return p.date.ok && !((config.periodOverrides[p.id] || {}).hidden); }).map(function (p) {
+      var per = model.periods.filter(function (p) { return p.date.ok && !((config.periodOverrides[p.id] || {}).hidden) && !(printMode && PR.hidePeriods && PR.hidePeriods.indexOf(p.id) >= 0); }).map(function (p) {
         var role = M.val(p, 'role', config) || 'span';
         var t0 = p.date.start, t1 = p.date.openEnd ? sc.t1 : (p.date.end !== undefined ? p.date.end + U.DAY - 1 : p.date.start + U.DAY);
         return { p: p, role: role, t0: t0, t1: t1, a0: sc.toAngle(Math.max(t0, sc.t0)), a1: sc.toAngle(Math.min(t1, sc.t1)), clipped: t0 < sc.t0 || t1 > sc.t1, outside: t1 < sc.t0 || t0 > sc.t1 };
@@ -4264,10 +4279,10 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       var phases = lay.phases ? per.filter(function (q) { return q.role === 'phase'; }) : [];
       var spans = per.filter(function (q) { return q.role !== 'phase' && (q.role === 'progress' ? lay.progress : lay.spans); });
       var nPh = L.tracks(phases, 0.3), nSp = L.tracks(spans, 1.2);
-      var phW = 17 * fs, phGap = 3 * fs, labelBand = 52 * fs, spStep = 23 * fs;      // thin time rings; 23 leaves room for a line of text above each ring (8 to 16.4 above its own line) without touching the next ring
+      var phW = (radial ? 11 : 17) * fs, phGap = (radial ? 3 : 3) * fs, labelBand = (radial ? 36 : printMode ? 47 : 52) * fs, spStep = (radial ? 15.5 : printMode ? 21 : 23) * fs;      // thin time rings; 23 leaves room for a line of text above each ring (8 to 16.4 above its own line) without touching the next ring
       var phOuter = Raxis - labelBand;
-      var spOuter = phOuter - nPh * (phW + phGap) - 12 * fs;
-      var Rhub = spOuter - nSp * spStep - 8 * fs;
+      var spOuter = phOuter - nPh * (phW + phGap) - (radial ? 5 : 12) * fs;
+      var Rhub = spOuter - nSp * spStep - (radial ? 3 : 8) * fs;
 
       s.push('<g id="chronogram">');
 
@@ -4292,7 +4307,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
           if (wt < sc.t0) continue;
           var wa = sc.toAngle(wt);
           if (sc.degPerDay(wt) * 7 * circ < 3.2) continue;
-          var q0 = S.pt(cx, cy, Raxis, wa), q1 = S.pt(cx, cy, Raxis - 5 * fs, wa);
+          var q0 = S.pt(cx, cy, Raxis, wa), q1 = S.pt(cx, cy, Raxis - (radial ? 3.5 : 5) * fs, wa);
           fine += 'M' + f(q0[0]) + ' ' + f(q0[1]) + 'L' + f(q1[0]) + ' ' + f(q1[1]);
         }
         if (fine) s.push('<path d="' + fine + '" stroke="' + C.rule + '" stroke-width="0.8"/>');
@@ -4303,12 +4318,12 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         if (t < sc.t0) continue;
         var a = sc.toAngle(t), d = new Date(t), isYear = d.getUTCMonth() === 0;
         var monthArc = (sc.toAngle(U.addMonths(t, 1)) - a) * circ;
-        var p0 = S.pt(cx, cy, Raxis + (isYear ? 9 : 0) * fs, a), p1 = S.pt(cx, cy, Raxis - (isYear ? 22 : (monthArc > 6 ? 9 : 6)) * fs, a);
+        var p0 = S.pt(cx, cy, Raxis + (isYear ? (radial ? 5 : 9) : 0) * fs, a), p1 = S.pt(cx, cy, Raxis - (isYear ? (radial ? 19 : 22) : (monthArc > 6 ? (radial ? 6.5 : 9) : (radial ? 4.5 : 6))) * fs, a);
         if (isYear) yt += 'M' + f(p0[0]) + ' ' + f(p0[1]) + 'L' + f(p1[0]) + ' ' + f(p1[1]);
         else if (lay.monthTicks && monthArc > 2.2) mt += 'M' + f(p0[0]) + ' ' + f(p0[1]) + 'L' + f(p1[0]) + ' ' + f(p1[1]);
         if (lay.monthTicks && monthArc > 22 * fs && !isYear) {
-          var ml = S.pt(cx, cy, Raxis - 19 * fs, a + (sc.toAngle(U.addMonths(t, 1)) - a) / 2);
-          labels += '<text x="' + f(ml[0]) + '" y="' + f(ml[1] + 3.5 * fs) + '" text-anchor="middle" font-family="' + famM + '" font-size="' + f(9.5 * fs) + '" fill="' + C.muted + '">' + U.MONTHS[d.getUTCMonth()][0] + '</text>';
+          var ml = S.pt(cx, cy, Raxis - (radial ? 14.5 : 19) * fs, a + (sc.toAngle(U.addMonths(t, 1)) - a) / 2);
+          labels += '<text x="' + f(ml[0]) + '" y="' + f(ml[1] + (radial ? 3.2 : 3.5) * fs) + '" text-anchor="middle" font-family="' + famM + '" font-size="' + f((radial ? 8.8 : 9.5) * fs) + '" fill="' + C.muted + '">' + U.MONTHS[d.getUTCMonth()][0] + '</text>';
         }
       }
       // year labels: placed just after each 1 January (or at range start)
@@ -4323,6 +4338,12 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         var la = big ? aa + Math.min(ab - aa, 70 * fs / circ) / 2 + 6 * fs / circ : (aa + ab) / 2;
         if (arcLen < 34 * fs || (la - lastYA) * circ < 52 * fs) continue;
         lastYA = la;
+        if (printMode) {
+          // on paper the years run along the ring, so a four-digit label never reaches across the phase bands on the sides of the circle
+          var lq = S.pt(cx, cy, Raxis - (radial ? 27.5 : 35.5) * fs, la), lm = ((la % 360) + 360) % 360, lrot = lm > 90 && lm < 270 ? lm + 180 : lm;
+          labels += '<text x="' + f(lq[0]) + '" y="' + f(lq[1]) + '" dy="0.36em" transform="rotate(' + f(lrot) + ' ' + f(lq[0]) + ' ' + f(lq[1]) + ')" text-anchor="middle" font-family="' + famT + '" font-weight="700" font-size="' + f((radial ? 13 : 21) * fs) + '" letter-spacing="-0.4" fill="' + C.ink + '">' + yr + '</text>';
+          continue;
+        }
         var lp = S.pt(cx, cy, Raxis - 42 * fs, la);
         labels += '<text x="' + f(lp[0]) + '" y="' + f(lp[1] + 8 * fs) + '" text-anchor="middle" font-family="' + famT + '" font-weight="700" font-size="' + f(24 * fs) + '" letter-spacing="-0.5" fill="' + C.ink + '">' + yr + '</text>';
       }
@@ -4333,6 +4354,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       var ps = S.pt(cx, cy, Raxis, sc.a0), pe = S.pt(cx, cy, Raxis, sc.a1);
       s.push('<circle cx="' + f(ps[0]) + '" cy="' + f(ps[1]) + '" r="' + f(3.5 * fs) + '" fill="' + C.ink + '"/>');
       s.push(arrowHead(pe, sc.a1, 9 * fs, C.ink));
+      if (!radial) {
       var topY = cy - Re - 26 * fs;
       s.push('<text x="' + f(cx + 14 * fs) + '" y="' + f(topY) + '" font-family="' + famM + '" font-weight="700" font-size="' + f(12 * fs) + '" fill="' + C.ink + '" letter-spacing="1">START · ' + esc(U.fdate(sc.start).toUpperCase()) + ' →</text>');
       s.push('<text x="' + f(cx - 14 * fs) + '" y="' + f(topY) + '" text-anchor="end" font-family="' + famM + '" font-weight="700" font-size="' + f(12 * fs) + '" fill="' + C.ink + '" letter-spacing="1">' + esc(U.fdate(sc.end).toUpperCase()) + ' · END</text>');
@@ -4342,6 +4364,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         var oy = topY + 18 * fs;
         if (early.length) s.push('<text x="' + f(cx + 14 * fs) + '" y="' + f(oy) + '" font-family="' + famS + '" font-style="italic" font-size="' + f(12 * fs) + '" fill="' + C.muted + '">' + esc(early.length + ' earlier record' + (early.length > 1 ? 's' : '') + ' outside the scale (' + early.map(function (e) { return '№ ' + e.seq + ', ' + U.fdate(e.date.start, e.date.precision); }).join('; ') + '), see index') + '</text>');
         if (late.length) s.push('<text x="' + f(cx - 14 * fs) + '" y="' + f(oy) + '" text-anchor="end" font-family="' + famS + '" font-style="italic" font-size="' + f(12 * fs) + '" fill="' + C.muted + '">' + esc(late.length + ' later record(s) outside the scale, see index') + '</text>');
+      }
       }
       s.push('</g>');
 
@@ -4369,10 +4392,10 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
           if (q.p.date.openEnd) s.push(arrowHead(S.pt(cx, cy, r, a1), a1, bw * 0.55, col, 4 * fs));
           var name = M.val(q.p, 'title', config) || 'Untitled period';
           var lbl = name.toUpperCase();
-          var fnt = U.font(FS, 11 * fs, 700), tw = U.measure(lbl, fnt) + lbl.length * 1.1 * fs;
+          var phFs = (radial ? 8.8 : 11) * fs, phLs = (radial ? 0.8 : 1.1) * fs, fnt = U.font(FS, phFs, 700), tw = U.measure(lbl, fnt) + lbl.length * phLs;
           var arcLen = (a1 - q.a0) * r * Math.PI / 180;
-          if (tw + 26 * fs < arcLen) {
-            s.push(arcText(cx, cy, r, q.a0, a1, lbl, ' font-family="' + famS + '" font-weight="700" font-size="' + f(11 * fs) + '" letter-spacing="' + f(1.1 * fs) + '" fill="' + K.on(col, C.ink, C.bg) + '"', q.p.id));
+          if (tw + (radial ? 14 : 26) * fs < arcLen) {
+            s.push(arcText(cx, cy, r, q.a0, a1, lbl, ' font-family="' + famS + '" font-weight="700" font-size="' + f(phFs) + '" letter-spacing="' + f(phLs) + '" fill="' + K.on(col, C.ink, C.bg) + '"', q.p.id));
           } else if (isF) {
             featuredQ.push({ q: q, r: r, bw: bw, color: col, title: P.shortTitle(q.p, config) });
             inner.push({ q: q, r: r - bw / 2, rc: r, color: col, title: name, sub: periodDates(q.p), kind: 'phase', featured: true });
@@ -4393,33 +4416,34 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
           var col = (config.periodOverrides[q.p.id] || {}).color || (role === 'context' ? C.muted : role === 'progress' ? C.accent : C.ink);
           var a1 = Math.max(q.a1, q.a0 + 0.4);
           s.push('<g class="span"' + da('id', q.p.id) + da('kind', 'period') + ' opacity="' + op + '">');
+          var wCtx = (radial ? 3.4 : 5) * fs, wLine = (radial ? 2 : 3) * fs, tkH = (radial ? 3.6 : 6) * fs;
           if (role === 'context') {
-            s.push('<path d="' + S.arc(cx, cy, r, q.a0, a1) + '" fill="none" stroke="' + col + '" stroke-width="' + f(5 * fs) + '" stroke-dasharray="' + f(1.5 * fs) + ' ' + f(2.5 * fs) + '"/>');
+            s.push('<path d="' + S.arc(cx, cy, r, q.a0, a1) + '" fill="none" stroke="' + col + '" stroke-width="' + f(wCtx) + '" stroke-dasharray="' + f(1.5 * fs) + ' ' + f(2.5 * fs) + '"/>');
           } else if (role === 'progress') {
-            s.push('<path d="' + S.arc(cx, cy, r, q.a0, a1) + '" fill="none" stroke="' + col + '" stroke-opacity="0.25" stroke-width="' + f(5 * fs) + '"/>');
+            s.push('<path d="' + S.arc(cx, cy, r, q.a0, a1) + '" fill="none" stroke="' + col + '" stroke-opacity="0.25" stroke-width="' + f(wCtx) + '"/>');
             var pct = q.p.derived.percent;
-            if (Number.isFinite(pct)) s.push('<path d="' + S.arc(cx, cy, r, q.a0, q.a0 + (a1 - q.a0) * U.clamp(pct / 100, 0, 1)) + '" fill="none" stroke="' + col + '" stroke-width="' + f(5 * fs) + '"/>');
+            if (Number.isFinite(pct)) s.push('<path d="' + S.arc(cx, cy, r, q.a0, q.a0 + (a1 - q.a0) * U.clamp(pct / 100, 0, 1)) + '" fill="none" stroke="' + col + '" stroke-width="' + f(wCtx) + '"/>');
           } else {
-            s.push('<path d="' + S.arc(cx, cy, r, q.a0, a1) + '" fill="none" stroke="' + col + '" stroke-width="' + f(3 * fs) + '"/>');
+            s.push('<path d="' + S.arc(cx, cy, r, q.a0, a1) + '" fill="none" stroke="' + col + '" stroke-width="' + f(wLine) + '"/>');
           }
           // end ticks
           [q.a0, a1].forEach(function (aa, k) {
             if (k === 1 && q.p.date.openEnd) { s.push(arrowHead(S.pt(cx, cy, r, aa), aa, 8 * fs, col)); return; }
-            var t0p = S.pt(cx, cy, r - 6 * fs, aa), t1p = S.pt(cx, cy, r + 6 * fs, aa);
+            var t0p = S.pt(cx, cy, r - tkH, aa), t1p = S.pt(cx, cy, r + tkH, aa);
             s.push('<line x1="' + f(t0p[0]) + '" y1="' + f(t0p[1]) + '" x2="' + f(t1p[0]) + '" y2="' + f(t1p[1]) + '" stroke="' + col + '" stroke-width="' + f(1.6 * fs) + '"/>');
           });
           var name = M.val(q.p, 'title', config) || 'Untitled period';
           if (role === 'progress' && Number.isFinite(q.p.derived.percent)) name = q.p.derived.percent + '% · ' + name;
-          var fnt = U.font(FS, 11.5 * fs), tw = U.measure(name, fnt);
+          var spFs = (radial ? 8.8 : 11.5) * fs, fnt = U.font(FS, spFs), tw = U.measure(name, fnt);
           // The text sits wholly above its own ring: its body spans 8 to 16.4 above the line (the next ring is 23 further out), and a paper halo
           // keeps any line that still crosses it (a leader, a stem) from striking through the letters. On the lower half the text is flipped to read
           // left to right, so its baseline is the outer edge and the baseline radius is the far side of the band.
-          var midA = ((q.a0 + a1) / 2 % 360 + 360) % 360, flipA = midA > 95 && midA < 265, rLab = r + (flipA ? 16.4 : 8) * fs;
+          var midA = ((q.a0 + a1) / 2 % 360 + 360) % 360, flipA = midA > 95 && midA < 265, rLab = r + (radial ? (flipA ? 10.8 : 4.2) : (flipA ? 16.4 : 8)) * fs;
           var arcLen = (a1 - q.a0) * rLab * Math.PI / 180;
           if (tw + 20 * fs < arcLen) {
-            s.push(arcText(cx, cy, rLab, q.a0, a1, name, ' font-family="' + famS + '" font-size="' + f(11.5 * fs) + '" fill="' + C.ink + '" paint-order="stroke" stroke="' + C.bg + '" stroke-width="' + f(3.2 * fs) + '" stroke-linejoin="round" stroke-opacity="0.92"', q.p.id, 'exact'));
+            s.push(arcText(cx, cy, rLab, q.a0, a1, name, ' font-family="' + famS + '" font-size="' + f(spFs) + '" fill="' + C.ink + '" paint-order="stroke" stroke="' + C.bg + '" stroke-width="' + f((radial ? 2 : 3.2) * fs) + '" stroke-linejoin="round" stroke-opacity="0.92"', q.p.id, 'exact'));
           } else {
-            inner.push({ q: q, r: r - 6 * fs, rc: r, color: col, title: name, sub: periodDates(q.p) + (role === 'context' ? ' · context' : ''), kind: role });
+            inner.push({ q: q, r: r - 6 * fs, rc: r + (radial ? 4 * fs : 0), color: col, title: name, sub: periodDates(q.p) + (role === 'context' ? ' · context' : ''), kind: role });      // on the thin print rings the badge sits a little outward of its line: the label of the ring inside it runs right under
           }
           s.push('</g>');
         });
@@ -4427,17 +4451,19 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       }
 
       // ---- featured period: name and dates run along the sector, from the hub outwards ----
+      var flStart = s.length;
       if (featuredQ.length) {
         s.push('<g id="featured-label">');
         featuredQ.forEach(function (fq) {
           var q = fq.q, a1 = Math.max(q.a1, q.a0 + 2.2), am = (q.a0 + Math.max(a1, q.a0 + 2.6)) / 2, wpx = (Math.max(a1, q.a0 + 2.6) - q.a0) * Math.PI / 180 * (Rhub + (fq.r - fq.bw / 2 - Rhub) / 2);
-          var r0 = Rhub + 14 * fs, r1 = fq.r - fq.bw / 2 - 10 * fs, avail = r1 - r0;
+          var r0 = Rhub + (printMode ? 5 : 14) * fs, r1 = fq.r - fq.bw / 2 - (printMode ? 5 : 10) * fs, avail = r1 - r0;
           var title = fq.title.toUpperCase(), size = 13.5 * fs, ls = 1.4 * fs;
           var tlen = U.measure(title, U.font(FS, size, 800)) + title.length * ls;
           if (tlen > avail) { size = size * avail / tlen; ls = ls * avail / tlen; }
+          if (printMode && size < 10.6) { size = 10.6; ls = 0.5 * fs; var tl2 = U.measure(title, U.font(FS, size, 800)) + title.length * ls; if (tl2 > avail) { ls = 0; tl2 = U.measure(title, U.font(FS, size, 800)); } if (tl2 > avail) r0 = Math.max(Rhub * 0.55, r0 - (tl2 - avail)); }      // on paper never below 6 pt: the name may run in over the edge of the map
           var right = ((am % 360) + 360) % 360 <= 180, rot = right ? am - 90 : am + 90, anchor = right ? 'start' : 'start';
           var pa = S.pt(cx, cy, right ? r0 : r1, am), tcol = K.legible(fq.color, C.bg, 3);
-          var two = wpx > 30 * fs, dd = two ? -0.3 * size : 0.35 * size;
+          var two = wpx > 30 * fs && !radial, dd = two ? -0.3 * size : 0.35 * size;      // on the print figure the dates are in the legend: one line fits the width of the sector
           var halo = ' paint-order="stroke" stroke="' + C.bg + '" stroke-width="' + f(4.5 * fs) + '" stroke-linejoin="round"';
           s.push('<g transform="translate(' + f(pa[0]) + ' ' + f(pa[1]) + ') rotate(' + f(rot) + ')">' +
             '<text x="0" y="' + f(dd) + '" text-anchor="' + anchor + '" font-family="' + famS + '" font-weight="800" font-size="' + f(size) + '" letter-spacing="' + f(ls) + '" fill="' + tcol + '"' + halo + '>' + esc(title) + '</text>' +
@@ -4446,6 +4472,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         s.push('</g>');
       }
 
+      var featuredSvg = printMode ? s.splice(flStart) : [];       // on paper the name may run in over the edge of the map: it is drawn after the map, with a halo
       // ---- datum lines ----
       if (lay.datums && datums.length) {
         s.push('<g id="reference-dates">');
@@ -4456,7 +4483,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
           var lp = S.pt(cx, cy, Rhub * 0.98 - 8 * fs, a);
           var rot = a - 90, anchor = 'end';
           if (a % 360 > 180) { rot = a + 90; anchor = 'start'; }
-          s.push('<text x="' + f(lp[0]) + '" y="' + f(lp[1]) + '" transform="rotate(' + f(rot) + ' ' + f(lp[0]) + ' ' + f(lp[1]) + ')" text-anchor="' + anchor + '" dy="0.35em" font-family="' + famM + '" font-size="' + f(12 * fs) + '" letter-spacing="0.6" fill="' + C.accent + '" paint-order="stroke" stroke="' + C.bg + '" stroke-width="' + f(4 * fs) + '" stroke-linejoin="round">' + esc(dm.label.toUpperCase()) + '</text>');
+          if (!printMode) s.push('<text x="' + f(lp[0]) + '" y="' + f(lp[1]) + '" transform="rotate(' + f(rot) + ' ' + f(lp[0]) + ' ' + f(lp[1]) + ')" text-anchor="' + anchor + '" dy="0.35em" font-family="' + famM + '" font-size="' + f(12 * fs) + '" letter-spacing="0.6" fill="' + C.accent + '" paint-order="stroke" stroke="' + C.bg + '" stroke-width="' + f(4 * fs) + '" stroke-linejoin="round">' + esc(dm.label.toUpperCase()) + '</text>');
         });
         s.push('</g>');
       }
@@ -4478,7 +4505,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       // ---- callout selection ----
       var callouts = selectCallouts(evs, phases, datums);
       var colTop = zoneTop + 6, colBot = zoneBottom - 6;
-      var placed = placeCallouts(callouts, cx, cy, Re, Rout, colW, gutter, colTop, colBot);
+      var placed = radial ? placeRadial(callouts, cx, cy, Rout) : placeCallouts(callouts, cx, cy, Re, Rout, colW, gutter, colTop, colBot);
 
       // ---- events (stems, dots, leaders) ----
       s.push('<g id="events">');
@@ -4493,13 +4520,14 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       s.push('<g id="event-stems">' + stems + '</g>');
       // leaders under dots
       s.push('<g id="leaders">');
-      var lgeo = placed.map(function (c) {
-        var x = c.ev, ax = c.side > 0 ? c.x - 8 * fs : c.x + 8 * fs, ay = c.y + c.anchorDy;
+      var lgeo = radial ? [] : placed.map(function (c) {
+        var x = c.ev, lg = printMode ? 3.5 * fs : 8 * fs, ax = c.side > 0 ? c.x - lg : c.x + lg, ay = c.y + c.anchorDy;
         return { p0: S.pt(cx, cy, x.r + dotS / 2 + 1, x.angle), p1: S.pt(cx, cy, Re, x.angle), a: [ax, ay], e: [c.side > 0 ? c.x - 2 : c.x + 2, ay], side: c.side };
       });
-      var lset = P.leaders(cx, cy, lgeo, fs);
+      var lset = radial ? placed.map(function (c) { return c.lead; }) : P.leaders(cx, cy, lgeo, fs);
       placed.forEach(function (c, li) {
         var x = c.ev, dimmed = (!matches[x.e.id] && fActive) || dimOp(x.e.date.start, x.e.date.start) < 1, ld = lset[li];
+        if (radial && !ld.d) { (parts[x.e.id] = parts[x.e.id] || {}).leaderPts = ld.pts; return; }
         (parts[x.e.id] = parts[x.e.id] || {}).leaderPts = ld.pts;
         parts[x.e.id].leader = '<path d="' + ld.d + '" fill="none" stroke="' + C.leader + '" stroke-width="' + f(0.85 * fs) + '" stroke-linejoin="round"/>';
         s.push('<path' + da('id', x.e.id) + ' class="leader" d="' + ld.d + '" fill="none" stroke="' + C.leader + '" stroke-width="' + f(0.85 * fs) + '" stroke-linejoin="round"' + (dimmed ? ' opacity="0.25"' : '') + '/>');
@@ -4542,7 +4570,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       s.push('</g>');
       (placed.floating || []).forEach(function (c) {
         var x = c.ev, p0 = S.pt(cx, cy, x.r + dotS / 2 + 1, x.angle), p1 = S.pt(cx, cy, Re, x.angle);
-        var ax = c.side > 0 ? c.x - 8 * fs : c.x + 8 * fs, ay = c.y + c.anchorDy;
+        var lg2 = printMode ? 3.5 * fs : 8 * fs, ax = c.side > 0 ? c.x - lg2 : c.x + lg2, ay = c.y + c.anchorDy;
         var pr = (parts[x.e.id] = parts[x.e.id] || {});
         pr.leaderPts = P.leader(cx, cy, p0, p1, [ax, ay], [c.side > 0 ? c.x - 2 : c.x + 2, ay], c.side).pts;
         pr.callout = { svg: c.svg(c).replace(/^<g[^>]*>/, '<g>').replace(/<rect class="hit"[^>]*\/>/, ''), x: c.x, y: c.y, h: c.h, w: colW, side: c.side, anchorDy: c.anchorDy, floating: true };
@@ -4558,6 +4586,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
 
       // ---- hub ----
       s.push(hub(cx, cy, Rhub, inner));
+      if (featuredSvg.length) s.push(featuredSvg.join(''));
       s.push('</g>'); // chronogram
       info.ring = { cx: cx, cy: cy, a0: sc.a0, a1: sc.a1, Rout: Rout, Raxis: Raxis, Rhub: Rhub, Re: Re, lanes: nl, zoneTop: zoneTop, zoneBottom: zoneBottom, colW: colW, gutter: gutter };
       return { svg: s.join('\n'), cx: cx, cy: cy, Raxis: Raxis, Rhub: Rhub, Re: Re, inner: inner };
@@ -4583,7 +4612,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         if (fActive && !matches[e.id]) score -= 50;
         x.score = score; x.why = why; x.forced = ov;
         return x;
-      }).filter(function (x) { return x.forced !== 'hide' && !(ann.density === 'key' && x.score <= 0) && ann.density !== 'none'; });
+      }).filter(function (x) { if (printMode) return x.forced !== 'hide'; return x.forced !== 'hide' && !(ann.density === 'key' && x.score <= 0) && ann.density !== 'none'; });
       // order: score, then greedy spread around the circle (coverage), then sequence
       var chosen = [], rest = list.slice();
       rest.sort(function (a, b) { return b.score - a.score || a.seq - b.seq; });
@@ -4600,14 +4629,17 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
           chosen.push(tier.splice(best, 1)[0]);
         }
       }
-      return chosen.slice(0, ann.density === 'all' ? chosen.length : Math.max(0, +ann.max || 0));
+      return printMode ? chosen : chosen.slice(0, ann.density === 'all' ? chosen.length : Math.max(0, +ann.max || 0));
     }
 
     /* ---------- callout geometry & placement ---------- */
     function placeCallouts(order, cx, cy, Re, Rout, colW, gutter, top, bot) {
       var len = ann.length, maxC = len === 'short' ? 0 : len === 'long' ? 260 : 130, maxL = len === 'long' ? 6 : 3;
+      if (printMode) maxC = 0;      // the print figure's labels are the index kind: symbol, number, date and place, nothing else
       var fT = U.font(FS, 15.5 * fs, 700), fE = U.font(FS, 13.5 * fs), fMeta = U.font(FS, 11.5 * fs, 400, 'italic');
-      var sides = { '1': [], '-1': [] }, used = { '1': 0, '-1': 0 }, cap = bot - top, gap = 14 * fs;
+      var sides = { '1': [], '-1': [] }, used = { '1': 0, '-1': 0 }, cap = bot - top, gap = (printMode ? 6 : 14) * fs;
+      var botS = { '1': printMode && +PR.colBottomR ? +PR.colBottomR : bot, '-1': printMode && +PR.colBottomL ? Math.max(bot, +PR.colBottomL) : bot };
+      var capS = { '1': botS['1'] - top, '-1': botS['-1'] - top };
       var rightX = cx + Rout + gutter, leftX = cx - Rout - gutter;
       // Two passes, both in priority order:
       //  1. reserve a compact (title-only) label for as many records as fit;
@@ -4616,7 +4648,33 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       //  2. upgrade reserved labels to the full text while space remains.
       // Records that get no label are numbered on the ring and in the index.
       var chosen = [], floats = [];
-      order.forEach(function (x) {
+      if (printMode) {
+        // Every record gets a label. The labels are as tall as the place names need (3 lines, then 2, then 1) until each column holds its share;
+        // while one column is over, the record nearest a pole moves to the other column (its leader runs round the free band above or below the ring).
+        var nat = function (x) { return (((x.angle % 360) + 360) % 360) < 180 ? 1 : -1; };
+        var poleD = function (x) { var a = ((x.angle % 360) + 360) % 360; return Math.min(a, 360 - a, Math.abs(a - 180)); };
+        var rows = [], tot = { '1': 0, '-1': 0 }, nl = 3;
+        // fewer lines of place first; only when even one line does not fit is a record moved to the far column
+        var tries = [[3, false], [2, false], [1, false], [2, true], [1, true]];
+        for (var ti = 0; ti < tries.length; ti++) {
+          nl = tries[ti][0]; info.index = {};
+          rows = order.map(function (x) { return { x: x, c: buildIndexCallout(x, colW, nl), side: nat(x) }; });
+          tot = { '1': 0, '-1': 0 };
+          rows.forEach(function (r) { tot[r.side] += r.c.h + gap; });
+          for (var g2 = 0; tries[ti][1] && g2 < 80 && (tot['1'] > capS['1'] || tot['-1'] > capS['-1']); g2++) {
+            var from = tot['-1'] - capS['-1'] > tot['1'] - capS['1'] ? -1 : 1, to = -from;
+            var cand = rows.filter(function (r) { return r.side === from; }).sort(function (a, b) { return poleD(a.x) - poleD(b.x); })[0];
+            if (!cand || tot[to] + cand.c.h + gap > capS[to]) break;
+            cand.side = to; tot[from] -= cand.c.h + gap; tot[to] += cand.c.h + gap;
+          }
+          if (tot['1'] <= capS['1'] && tot['-1'] <= capS['-1']) break;
+        }
+        rows.forEach(function (r) {
+          if (used[r.side] + r.c.h + gap <= capS[r.side]) { used[r.side] += r.c.h + gap; chosen.push({ x: r.x, c: r.c, side: r.side }); }
+          else { info.overflow++; floats.push({ x: r.x, c: r.c, side: nat(r.x) }); }
+        });
+        info.printLocLines = nl;
+      } else order.forEach(function (x) {
         var a = ((x.angle % 360) + 360) % 360;
         var side = a < 180 ? 1 : -1;
         var nearPole = a < 40 || a > 320 || Math.abs(a - 180) < 40;
@@ -4626,7 +4684,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         used[sd] += c.h + gap;
         chosen.push({ x: x, c: c, side: sd });
       });
-      info.sideUse = { right: Math.round(used['1']), left: Math.round(used['-1']), cap: Math.round(cap) };
+      info.sideUse = { right: Math.round(used['1']), left: Math.round(used['-1']), capR: Math.round(capS['1']), capL: Math.round(capS['-1']), cap: Math.round(cap) };
       if (maxC) chosen.forEach(function (ch) {
         var full = buildCallout(ch.x, colW, fT, fE, fMeta, maxC, maxL);
         if (used[ch.side] - ch.c.h + full.h <= cap) { used[ch.side] += full.h - ch.c.h; ch.c = full; }
@@ -4642,7 +4700,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       var placed = [];
       [1, -1].forEach(function (side) {
         var list = sides[side].sort(function (a, b) { return a.target - b.target; });
-        var ok = L.spread(list, gap, top, bot);
+        var ok = L.spread(list, gap, top, botS[side]);
         if (!ok) { list.forEach(function (c, i) { c.y = top + i * 10; }); }
         placed = placed.concat(list);
       });
@@ -4650,7 +4708,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       placed.floating = floats.map(function (fl) {
         var c = fl.c; c.side = fl.side; c.ev = fl.x; c.x = fl.side > 0 ? rightX : leftX;
         var anchor = S.pt(cx, cy, Re, fl.x.angle);
-        c.y = U.clamp(anchor[1] - c.anchorDy, top, Math.max(top, bot - c.h));
+        c.y = U.clamp(anchor[1] - c.anchorDy, top, Math.max(top, botS[fl.side] - c.h));
         return c;
       });
       return placed;
@@ -4711,13 +4769,180 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       };
     }
 
+    /* ---------- print figure: the index label ----------
+       A label of the print figure says only what the arrow needs: the symbol of the record, its number, its date and its place.
+       The title and the text are in the legend (js/viz/print.js), under the same number and symbol. */
+    function indexText(e) {
+      var dateTxt = U.fdate(e.date.start, e.date.precision);
+      if (ann.showDateRange && e.date.isRange && e.date.end !== undefined) dateTxt += ' – ' + U.fdate(e.date.end, e.date.precision === 'minute' ? 'day' : e.date.precision);
+      var loc = String(M.val(e, 'location', config) || e.derived.parsed.headerLine || '').replace(/\s+/g, ' ').trim();
+      return { meta: '№ ' + e.seq + '  ·  ' + dateTxt.toUpperCase(), loc: loc };
+    }
+    /** Print figure, radial labels: the symbol stays on the circle at its date and the number, the date and the place are written along the radius
+        from the symbol outwards (two lines, side by side), upright on both halves of the circle. A label starts against its own symbol, so
+        it needs no leader; it starts beyond a symbol of an outer lane only where that symbol is in its way. Labels that would touch are fanned
+        apart by the smallest angle that clears them: those few start outside the ring and have a short line to their symbol. */
+    function placeRadial(order, cx, cy, Rout) {
+      var D2R = Math.PI / 180, fz = 10.5 * fs, lh = 11.5 * fs, pitch = 2 * lh + 3.5 * fs, hw = pitch / 2, mR = 4 * fs, gapM = 2.6 * fs, symW = 12 * fs, rEdge = Rout + 2 * fs;
+      var fMeta = U.font(FS, fz, 600), fPlace = U.font(FS, fz, 400);
+      var bounds = PR.bounds || { x0: m, y0: m, x1: W - m, y1: H - m }, obs = PR.obstacles || [];
+      var items = order.slice().sort(function (a, b) { return a.angle - b.angle || a.r - b.r || a.seq - b.seq; });
+      // records of one date: the outermost symbol takes the middle of the fan, the inner ones go to alternate sides, so the lines do not cross
+      var ordered = [];
+      for (var i = 0, j; i < items.length; i = j + 1) {
+        j = i; while (j + 1 < items.length && Math.abs(items[j + 1].angle - items[i].angle) < 0.2) j++;
+        var grp = items.slice(i, j + 1).sort(function (a, b) { return b.r - a.r; });
+        if (grp.length < 3) { ordered = ordered.concat(grp.slice().reverse()); continue; }
+        var lft = [], rgt = [];
+        grp.slice(1).forEach(function (x, k) { (k % 2 ? rgt : lft).push(x); });
+        ordered = ordered.concat(lft.reverse(), [grp[0]], rgt);
+      }
+      items = ordered;
+      // 1. the angle of each label: the least movement from the true angle that keeps the strips apart (a strip is as wide as its two lines)
+      var hE = pitch / rEdge / D2R;
+      // pictures (square, upright) go between the symbol and the number: the side of each one is the largest that leaves the first line of the label its room
+      var Smax = Math.max(0, +PR.picMax || 0), Smin = Math.max(8, +PR.picMin || 30), gp = 2.5 * fs;
+      function headNeed(x) { var m = x.tx.meta.replace(/,\s*\d{1,2}[:.]\d{2}.*$/, ''); return U.measure(m, fMeta) + m.length * 0.6 + 2 * fs; }
+      // the picture is turned with the line (the same rotation as the label), so along the radius it is as deep as it is wide at every angle
+      function picFit(x, ph, p0, cap) {
+        var a = ph * D2R, ux = Math.sin(a), uy = -Math.cos(a), nx = -uy, ny = ux, need = headNeed(x);
+        for (var Sz = Math.min(Smax, cap); Sz >= Smin; Sz -= 1) {
+          var mid = p0 + Sz / 2, qx = cx + ux * mid, qy = cy + uy * mid, ex = (Math.abs(ux) + Math.abs(nx)) * Sz / 2, ey = (Math.abs(uy) + Math.abs(ny)) * Sz / 2;
+          if (qx - ex < bounds.x0 || qx + ex > bounds.x1 || qy - ey < bounds.y0 || qy + ey > bounds.y1) continue;
+          if (room(ph, p0 + Sz + gp) >= need) return Sz;
+        }
+        return 0;
+      }
+      items.forEach(function (x) { x.tx = indexText(x.e); x.pic = Smax && lay.images !== false && PCS.images ? PCS.images.get(x.e.id) : null; x.S0 = 0; });
+      items.forEach(function (x) { if (x.pic) x.S0 = picFit(x, x.angle, x.r + mR + gapM, Smax); });
+      var sp = items.map(function (x) { var h = Math.max(hE, x.S0 ? (x.S0 + 2 * fs) / rEdge / D2R : 0); return { target: x.angle - h / 2, h: h }; });
+      var phi = items.map(function (x) { return x.angle; });
+      if (L.spread(sp, 0, 1.5, 358.5)) phi = items.map(function (x, i2) { return sp[i2].y + sp[i2].h / 2; });
+      // 2. where each label starts: against its own symbol; beyond a symbol of an outer lane in its way; at the ring's edge if it was moved off its symbol
+      function angD(a, b) { var d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; }
+      function room(deg, t0) {
+        var a = deg * D2R, ux = Math.sin(a), uy = -Math.cos(a), nx = -uy, ny = ux, t = t0;
+        for (; t < t0 + 700; t += 4) {
+          var free = true;
+          for (var sg = -1; sg <= 1 && free; sg += 2) {
+            var px = cx + ux * t + nx * sg * hw, py = cy + uy * t + ny * sg * hw;
+            if (px < bounds.x0 || px > bounds.x1 || py < bounds.y0 || py > bounds.y1) free = false;
+            for (var q = 0; q < obs.length && free; q++) if (px > obs[q].x0 && px < obs[q].x1 && py > obs[q].y0 && py < obs[q].y1) free = false;
+          }
+          if (!free) break;
+        }
+        return t - t0 - 4;
+      }
+      var placed = [], starts = [];
+      items.forEach(function (x, i2) {
+        var e = x.e, cat = M.category(e, config), tx = x.tx, ph = phi[i2], left = ph > 180, none = !tx.loc;
+        var off = angD(ph, x.angle) * D2R * x.r;                          // how far the label was moved off its symbol, along the ring
+        var st = x.r + mR + gapM;
+        if (off > 12 * fs) st = Math.max(st, rEdge);
+        var wx = Math.max(hw, x.S0 / 2 + 1 * fs);      // half the width of the widest part of this label (its picture, if it has one)
+        items.forEach(function (o) { if (o !== x && o.r > x.r + 0.5 && angD(o.angle, ph) * D2R * o.r < wx + mR + 1.5 * fs) st = Math.max(st, o.r + mR + gapM); });
+        // two strips that start at different radii still must not touch where both exist: the narrower angle must hold at the larger start radius
+        for (var jj = 0; jj < i2 && st < rEdge; jj++) {
+          var wj = Math.max(pitch, items[jj].S0 ? items[jj].S0 + 2 * fs : 0), wi = Math.max(pitch, x.S0 ? x.S0 + 2 * fs : 0);
+          if (Math.abs(starts[jj] - st) < 100 && angD(phi[jj], ph) * D2R * Math.max(starts[jj], st) < (wi + wj) / 2 - 0.3) st = rEdge;
+        }
+        starts[i2] = st;
+        var M0 = S.pt(cx, cy, x.r, x.angle), PT = S.pt(cx, cy, st, ph), dist = Math.hypot(PT[0] - M0[0], PT[1] - M0[1]), lead = dist > mR + gapM + 5 * fs;
+        var tt = lead ? st + symW : st, Sz = 0, pE = 0, pStart = tt;
+        if (x.S0) { Sz = picFit(x, ph, pStart, x.S0); if (Sz) { pE = Sz; tt = pStart + pE + gp; } }
+        var len = Math.max(room(ph, tt), 60);
+        var metaW = U.measure(tx.meta, fMeta) + tx.meta.length * 0.6;
+        if (metaW > len) {      // the first line is the one thing that cannot be cut: a time of day goes (the legend has it) when the strip is too short
+          var m2 = tx.meta.replace(/,\s*\d{1,2}[:.]\d{2}.*$/, '');
+          if (m2 !== tx.meta) { tx = Object.assign({}, tx, { meta: m2 }); metaW = U.measure(tx.meta, fMeta) + tx.meta.length * 0.6; }
+        }
+        var line2 = none ? ['Location not recorded'] : wrapPlace(tx.loc, fPlace, Math.max(len, metaW), 1);
+        (info.index = info.index || {})[e.id] = { meta: tx.meta, loc: tx.loc, shown: none ? '' : line2[0], truncated: !none && /\u2026$/.test(line2[0]), lines: 1 };
+        var ld = { d: '', pts: [M0, PT] };
+        if (lead) { var vx = PT[0] - M0[0], vy = PT[1] - M0[1], vl = Math.hypot(vx, vy) || 1, p0 = [M0[0] + vx / vl * (mR + 1), M0[1] + vy / vl * (mR + 1)]; ld = { d: 'M' + f(p0[0]) + ' ' + f(p0[1]) + 'L' + f(PT[0]) + ' ' + f(PT[1]), pts: [p0, PT] }; }
+        var sym = S.pt(cx, cy, st + 4.5 * fs, ph), tp = S.pt(cx, cy, tt, ph), rot = left ? ph + 90 : ph - 90, ta = left ? 'end' : 'start';
+        var b1 = -lh / 2 + 0.35 * fz, b2 = lh / 2 + 0.35 * fz;
+        placed.push({ ev: x, side: 0, x: 0, y: 0, h: 0, anchorDy: 0, lead: ld, pic: Sz, shifted: off > 1.5 * fs, adjacent: !lead, phi: ph, len: len, startR: st,
+          svg: function () {
+            var g = '<g class="callout"' + da('id', e.id) + '>';
+            if (lead) g += P.marker(cat.shape, sym[0], sym[1], 9 * fs, cat.color, C.ink, f(0.8 * fs));
+            if (Sz) {
+              var pc = S.pt(cx, cy, pStart + pE / 2, ph), cid = 'pc-' + String(e.id).replace(/[^\w-]/g, ''), hz = Sz / 2;
+              g += '<g class="picture" transform="translate(' + f(pc[0]) + ' ' + f(pc[1]) + ') rotate(' + f(rot) + ')">' +
+                '<clipPath id="' + cid + '"><rect x="' + f(-hz) + '" y="' + f(-hz) + '" width="' + f(Sz) + '" height="' + f(Sz) + '"/></clipPath>' +
+                '<image x="' + f(-hz) + '" y="' + f(-hz) + '" width="' + f(Sz) + '" height="' + f(Sz) + '" preserveAspectRatio="xMidYMid slice" clip-path="url(#' + cid + ')" xlink:href="' + (x.pic.thumb || x.pic.data) + '"/>' +
+                '<rect x="' + f(-hz) + '" y="' + f(-hz) + '" width="' + f(Sz) + '" height="' + f(Sz) + '" fill="none" stroke="' + cat.color + '" stroke-width="' + f(1.2 * fs) + '"/></g>';
+            }
+            g += '<g transform="translate(' + f(tp[0]) + ' ' + f(tp[1]) + ') rotate(' + f(rot) + ')">' +
+              '<text x="0" y="' + f(b1) + '" text-anchor="' + ta + '" font-family="' + famM + '" font-weight="600" font-size="' + f(fz) + '" letter-spacing="0.6" fill="' + C.ink + '">' + esc(tx.meta) + '</text>' +
+              '<text x="0" y="' + f(b2) + '" text-anchor="' + ta + '" font-family="' + famS + '"' + (none ? ' font-style="italic"' : '') + ' font-size="' + f(fz) + '" fill="' + (none ? C.muted : C.tint(0.72)) + '">' + esc(line2[0]) + '</text></g>';
+            return g + '</g>';
+          } });
+      });
+      placed.floating = [];
+      info.radialLabels = placed.map(function (c) { return { id: c.ev.e.id, seq: c.ev.e.seq, pic: c.pic, angle: c.ev.angle, phi: c.phi, len: c.len, shifted: c.shifted, adjacent: c.adjacent, startR: c.startR, r: c.ev.r }; }); info.radialPitchDeg = pitch / rEdge / D2R;
+      info.sideUse = { radial: true, labels: placed.length, shifted: placed.filter(function (c) { return c.shifted; }).length, adjacent: placed.filter(function (c) { return c.adjacent; }).length };
+      return placed;
+    }
+    function printColW() {
+      var f1 = U.font(FS, 11 * fs, 600), w = 0;
+      model.events.forEach(function (e) { if (e.date.ok && e.title && sc.inRange(e.date.start)) { var t = indexText(e).meta; w = Math.max(w, U.measure(t, f1) + t.length * 0.8); } });
+      return Math.ceil(Math.max(120 * fs, w + 15 * fs + 4 * fs));
+    }
+    /** Word wrap for a place name: also breaks after an en dash, a hyphen or a slash, and never lets a line pass the column. */
+    function wrapPlace(text, font, width, maxLines) {
+      text = String(text || '').replace(/\s+/g, ' ').trim();
+      if (!text) return [];
+      var pieces = [];
+      text.split(' ').forEach(function (w) {
+        var parts = U.measure(w, font) > width ? (w.match(/[^\u2013\/\-]+[\u2013\/\-]?|[\u2013\/\-]/g) || [w]) : [w];
+        parts.forEach(function (q, i) { pieces.push({ t: q, sp: i === 0 }); });
+      });
+      var lines = [], line = '';
+      pieces.forEach(function (q) {
+        var test = line ? line + (q.sp ? ' ' : '') + q.t : q.t;
+        if (!line || U.measure(test, font) <= width) line = test; else { lines.push(line); line = q.t; }
+      });
+      if (line) lines.push(line);
+      var cut = function (t) { while (t.length > 1 && U.measure(t, font) > width) t = t.slice(0, -1); return t; };
+      var over = lines.length > maxLines;
+      lines = lines.slice(0, maxLines).map(cut);
+      if (over) {
+        var last = lines[maxLines - 1].replace(/[\s,;:.\u2013\u2014\/-]+$/, '');
+        while (last.length > 1 && U.measure(last + '\u2026', font) > width) last = last.slice(0, -1);
+        lines[maxLines - 1] = last.replace(/[\s,;:.\u2013\u2014\/-]+$/, '') + '\u2026';
+      }
+      return lines;
+    }
+    function buildIndexCallout(x, colW, nLoc) {
+      var e = x.e, cat = M.category(e, config), tx = indexText(e);
+      var fL = U.font(FS, 11 * fs, 400), lhL = 13 * fs, textW = colW - 15 * fs - 2;
+      var locLines = tx.loc ? wrapPlace(tx.loc, fL, textW, nLoc || 3) : [];
+      var none = !locLines.length;
+      if (none) locLines = ['Location not recorded'];
+      (info.index = info.index || {})[e.id] = { meta: tx.meta, loc: tx.loc, shown: none ? '' : locLines.join(' '), truncated: !none && /\u2026$/.test(locLines[locLines.length - 1]), lines: locLines.length };   // the legend repeats what the label had to cut
+      var h = 11 * fs + 3 * fs + locLines.length * lhL;
+      return {
+        h: h, anchorDy: 7 * fs,
+        svg: function (c) {
+          var side = c.side, edge = c.x, ta = side > 0 ? 'start' : 'end', y = c.y + 11 * fs;
+          var g = '<g class="callout"' + da('id', e.id) + '>';
+          g += P.marker(cat.shape, side > 0 ? edge + 5 * fs : edge - 5 * fs, y - 4 * fs, 10 * fs, cat.color, C.ink, f(0.8 * fs));
+          var txx = side > 0 ? edge + 15 * fs : edge - 15 * fs;
+          g += '<text x="' + f(txx) + '" y="' + f(y) + '" text-anchor="' + ta + '" font-family="' + famM + '" font-weight="600" font-size="' + f(11 * fs) + '" letter-spacing="0.8" fill="' + C.ink + '">' + esc(tx.meta) + '</text>';
+          g += textLines(locLines, txx, y + lhL * 0.95 + 1 * fs, lhL, ' text-anchor="' + ta + '" font-family="' + famS + '"' + (none ? ' font-style="italic"' : '') + ' font-size="' + f(11 * fs) + '" fill="' + (none ? C.muted : C.tint(0.72)) + '"');
+          return g + '</g>';
+        }
+      };
+    }
+
     /* ---------- hub: map + inner labels ---------- */
     function hub(cx, cy, R, inner) {
       var s = ['<g id="hub">'];
       var mapOn = lay.map && PCS.map && PCS.map.available();
       if (mapOn) {
         var hlRec = config.map.exportHighlight && !X ? model.events.concat(model.periods).filter(function (r) { return r.id === config.map.exportHighlight; })[0] : null;
-        s.push(PCS.map.render(model, config, { cx: cx, cy: cy, R: R, fs: fs, C: C, famS: famS, X: X, da: da,
+        s.push(PCS.map.render(model, config, { cx: cx, cy: cy, R: R, fs: fs, C: C, famS: famS, X: X, da: da, fitLabels: printMode,
           highlight: hlRec ? { id: hlRec.id, color: hlRec.kind === 'event' ? M.category(hlRec, config).color : C.accent2, names: PCS.map.municipalitiesOf(hlRec, config) } : null }));
       } else if (lay.hubKey) {
         var dl = U.wrap(sc.text, U.font(FS, 13 * fs), Math.min(340 * fs, R * 1.1), 6);
@@ -4731,8 +4956,8 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         var p = S.pt(cx, cy, it.rc, am);
         var dim = emOn && (it.q.t1 < emA || it.q.t0 > emB) ? 0.3 : 1;
         s.push('<g class="inner-label"' + da('id', it.q.p.id) + da('kind', 'period') + ' opacity="' + dim + '">' +
-          '<circle cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f(9.5 * fs) + '" fill="' + (it.featured ? C.bg : C.ink) + '" stroke="' + (it.featured ? C.ink : C.bg) + '" stroke-width="' + f(1.5 * fs) + '"/>' +
-          '<text x="' + f(p[0]) + '" y="' + f(p[1]) + '" dy="0.36em" text-anchor="middle" font-family="' + famS + '" font-weight="700" font-size="' + f(11 * fs) + '" fill="' + (it.featured ? C.ink : C.bg) + '">' + it.letter + '</text></g>');
+          '<circle cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + f((radial ? 7.2 : 9.5) * fs) + '" fill="' + (it.featured ? C.bg : C.ink) + '" stroke="' + (it.featured ? C.ink : C.bg) + '" stroke-width="' + f(1.5 * fs) + '"/>' +
+          '<text x="' + f(p[0]) + '" y="' + f(p[1]) + '" dy="0.36em" text-anchor="middle" font-family="' + famS + '" font-weight="700" font-size="' + f((radial ? 8.8 : 11) * fs) + '" fill="' + (it.featured ? C.ink : C.bg) + '">' + it.letter + '</text></g>');
       });
       s.push('</g>');
       return s.join('');
@@ -4946,6 +5171,383 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     lines.push('Typeface: Inter and Inter Display (SIL Open Font License).' + (PCS.BASEMAP ? ' Map: GLA305 QGIS layers: Poyo sub-basins, INE municipal boundaries, hydrography, OpenStreetMap places (EPSG:25830).' : ''));
     return lines;
   }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>/* js/viz/print.js */
+/* =========================================================================
+   The print figure: the chronogram for a fixed place on a printed sheet.
+
+   Two drawings, each in real millimetres (one drawing unit = settings.unit mm, 0.2 by default, so the type is sized in points on paper):
+
+     figure   a square (320 x 320 mm): the diagram and nothing else. The time scale is a circle at least 240 mm across, the rings and
+              the map inside it are as thin and as large as the sheet allows, and each record has a label that says only what it needs: its
+              symbol, number, date and place.
+     legend   a tall sheet (160 x 320 mm): the title, every key (symbols, periods, the reading key, the map shading and its gradient, the credit)
+              and every record under the same number and symbol with its title. The lines of text are fitted to the sheet.
+
+   Both come from the same drawing code as the poster (js/viz/poster.js, mode 'print'), so every number, symbol and colour agrees with the
+   page the studio shows. Nothing is rasterised: the files are SVG with the fonts embedded; PNG and PDF are made from them.
+   ========================================================================= */
+(function (root) {
+  'use strict';
+  var PCS = root.PCS, U = PCS.util, S = PCS.scale, M = PCS.model, P = PCS.poster, F = PCS.frame, K = U.color;
+  var R = PCS.print = {};
+  var f = S.f, esc = U.esc;
+
+  R.DEFAULTS = {
+    mm: 320,            // the figure is a square of this side
+    legendW: 160,       // the legend sheet, width and height
+    legendH: 320,
+    unit: 0.2,          // millimetres per drawing unit
+    labels: 'radial',   // 'radial': each label runs along the radius from its record (no leaders); 'columns': two columns with leaders
+    axisMm: 240,        // radial labels: the diameter of the time scale circle, in mm (no smaller than 240; the labels take what is left of the square)
+    scale: 'overview',  // the time scale of the circle: 'overview' (the studio's Overview: event days evenly spaced in date order, not to scale) or 'studio' (as it is set in the Time scale panel)
+    pictures: true,     // the record's picture (when it has one) between its symbol and its number, as large as the room along the label allows
+    pictureMinMm: 6,    // the smallest side of a picture, in mm (not in the panel)
+    pictureMm: 12,      // the largest side of a picture, in mm (a picture is never smaller than 6 mm: where it cannot be that, it is left out)
+    skip: 'Temporary Public Space Repair',   // periods left out of the figure and the legend: names (or the letter the legend shows), separated by ;
+    type: 1.2,          // type scale: 1.2 gives 7.5 pt for the date and place on the arrows and 6.5 pt for the smallest text
+    title: false,       // the title block on the figure (it is on the legend sheet)
+    keys: false,        // the reading key and the map key on the figure (they are on the legend sheet)
+    text: 'auto',       // lines of text under each record in the legend: 'auto' (as many as fit), '0' (titles only), '1', '2', '3'
+    paper: 'clear'      // 'clear' (no background: the sheet shows through) or 'paper' (the poster paper colour)
+  };
+  /** The print settings of a configuration, with every missing value filled in. */
+  R.settings = function (config) {
+    var o = {}, c = (config && config.print) || {};
+    Object.keys(R.DEFAULTS).forEach(function (k) { o[k] = c[k] === undefined || (c[k] === '' && k !== 'skip') ? R.DEFAULTS[k] : c[k]; });      // an empty list of skipped periods is a choice
+    o.mm = U.clamp(+o.mm || 320, 100, 1200); o.legendW = U.clamp(+o.legendW || 160, 60, 600); o.legendH = U.clamp(+o.legendH || 320, 100, 1200);
+    o.unit = U.clamp(+o.unit || 0.2, 0.05, 0.5); o.type = U.clamp(+o.type || 1.2, 0.8, 2); o.axisMm = U.clamp(+o.axisMm || 240, 100, 1100);
+    o.pictures = !(o.pictures === false || o.pictures === 'false' || o.pictures === 0 || o.pictures === '0'); o.pictureMm = U.clamp(+o.pictureMm || 12, 6, 40); o.pictureMinMm = U.clamp(+o.pictureMinMm || 6, 2, 20);
+    o.skip = String(o.skip || '').split(';').map(function (t) { return t.trim(); }).filter(Boolean);
+    return o;
+  };
+  var MM2PT = 72 / 25.4;
+  /** The configuration the figure is drawn with: the studio's own, with the time scale set to Overview (event days spaced evenly in date order) unless the figure follows the studio. */
+  R.config = function (config) {
+    var st = R.settings(config);
+    if (st.scale === 'studio' || (config.scale && config.scale.mode === 'ordinal')) return config;
+    var c = Object.assign({}, config); c.scale = Object.assign({}, config.scale, { mode: 'ordinal' });
+    return c;
+  };
+
+  function names(config) {
+    var pc = config.poster, fb = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+    return { title: pc.titleFont, text: pc.textFont, T: "'" + pc.titleFont + "', " + fb, S: "'" + pc.textFont + "', " + fb };
+  }
+  function wrapSvg(inner, W, H, wmm, hmm, fam, title, fontCss, bg, C) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ' + W + ' ' + H + '" width="' + f(wmm) + 'mm" height="' + f(hmm) + 'mm"' +
+      ' font-family="' + fam + '" text-rendering="geometricPrecision">' + (fontCss ? '<defs><style>' + fontCss + '</style></defs>' : '') +
+      '<title>' + esc(title) + '</title>' + (bg ? '<rect id="paper" x="0" y="0" width="' + W + '" height="' + H + '" fill="' + C.bg + '"/>' : '') + inner + '</svg>';
+  }
+
+  /** What the figure and the legend share: the render, so the legend can ask about it (the same numbers, the cut places). */
+  R.build = function (model, config, opt) {
+    opt = opt || {};
+    config = R.config(config);
+    var st = R.settings(config), W = Math.round(st.mm / st.unit), mg = Math.round(2 / st.unit), radial = st.labels === 'radial';
+    var pr = { mm: st.mm, unit: st.unit, W: W, H: W, fs: st.type, margin: mg, labels: st.labels, hidePeriods: [], picMax: st.pictures ? Math.round(st.pictureMm / st.unit) : 0, picMin: Math.round(st.pictureMinMm / st.unit) };
+    var go = function () { return P.render(model, config, { mode: 'print', forExport: true, agency: PCS.app && PCS.app.agency, print: pr }); };
+    var render, parts = null, first = null;
+    // a first drawing tells the depth of the lanes of same-day records (it sets where the circle sits on the sheet) and the letters of the periods
+    pr.zoneTop = mg; pr.zoneBottom = W - mg;
+    if (radial) { pr.Raxis = Math.round(st.axisMm / 2 / st.unit); pr.obstacles = []; }
+    if (radial || st.skip.length) first = go();
+    if (st.skip.length) {
+      var lp = (first.info.legend && first.info.legend.periods) || [];
+      st.skip.forEach(function (tok) {
+        if (/^[A-Za-z]\d?$/.test(tok)) lp.forEach(function (p) { if (String(p.letter).toUpperCase() === tok.toUpperCase()) pr.hidePeriods.push(p.id); });      // a letter, as the legend shows it
+        else model.periods.forEach(function (p) { var t = String(M.val(p, 'title', config) || '').toLowerCase(); if (t === tok.toLowerCase() || t.indexOf(tok.toLowerCase()) === 0) pr.hidePeriods.push(p.id); });
+      });
+    }
+    if (radial) {
+      // the time scale is a fixed circle (st.axisMm across); the lanes of same-day records go outwards from it and the labels start beyond them.
+      // The circle sits a little off the middle of the sheet, towards the side where the labels are shorter, so both sides keep a label's length.
+      var Rax = pr.Raxis;
+      var nmL = names(config), Lneed = U.measure('№ 42 · 28 SEP 2026', U.font(nmL.text, 10.5 * st.type, 600)) + 17 * 0.6 + 12 * st.type + 4 * st.type;      // the longest first line of a label, after its repeated symbol
+      var cxMin = mg + first.info.ring.Re + 2 * st.type + Lneed, cxMax = W - mg - Rax - 8 * st.type - Lneed;
+      pr.cx = Math.round(cxMin <= cxMax ? U.clamp(W / 2, cxMin, cxMax) : Math.min(cxMin, W - mg - Rax - 14 * st.type)); pr.cy = Math.round(W / 2);      // the left side carries the most labels: it gets its length first
+      pr.zoneTop = mg; pr.zoneBottom = W - mg; pr.obstacles = [];
+      if (st.title || st.keys) { parts = radialParts(model, config, st, P.palette(config), first.info, W, mg); pr.obstacles = parts.obstacles; }
+      render = go();
+    } else {
+      // the stage between the title (above) and the keys (below): the ring and both columns of labels live in it
+      var zt = st.title ? Math.round(93 * st.type + mg + 14) : mg + 10, zb = st.keys ? W - mg - Math.round(200 * st.type) : W - mg - 20;
+      pr.zoneTop = zt; pr.zoneBottom = zb; pr.colBottomL = W - mg - 4; pr.colBottomR = W - mg - Math.round(64 * st.type);
+      render = go();
+    }
+    return { st: st, render: render, W: W, C: P.palette(config), parts: parts, radial: radial, skipped: pr.hidePeriods.length, hidden: pr.hidePeriods.slice(), fontCss: opt.fontCss !== undefined ? opt.fontCss : (config.poster.embedFonts !== false && PCS.exporter ? PCS.exporter.fontCss() : '') };
+  };
+
+  /** Radial figure: the title (top left), the reading key (bottom left), the map key and the credit (bottom right), and the boxes they take. */
+  function radialParts(model, config, st, C, info, W, mg) {
+    var fs = st.type, nm = names(config), tone = F.tones(C), pc = config.poster, out = { title: '', keys: '', credit: '', obstacles: [], keyInfo: null };
+    var pad = 6 * fs;
+    if (st.title) {
+      var tw = Math.round(W * 0.3), y = mg + 2, g = ['<g id="print-title">'];
+      g.push('<rect x="' + f(mg) + '" y="' + f(y) + '" width="' + f(34 * fs) + '" height="' + f(3.4 * fs) + '" fill="' + tone.tab + '"/>');
+      var kf = U.font(nm.text, 10.5 * fs, 700), kick = F.wrapSp(String(pc.kicker || '').toUpperCase(), kf, 1.3 * fs, tw, 1);
+      y += 3.4 * fs + 16 * fs;
+      g.push(F.lines(kick, mg, y, 13 * fs, 10.5 * fs, { family: nm.S, weight: 700, ls: 1.3 * fs, fill: tone.body }));
+      var tf = U.font(nm.title, 28 * fs, 700), tl = F.wrapSp(pc.title, tf, -0.6 * fs, tw, 2);
+      y += 30 * fs;
+      g.push(F.lines(tl, mg, y, 31 * fs, 28 * fs, { family: nm.T, weight: 700, ls: -0.6 * fs, fill: C.ink }));
+      y += (tl.length - 1) * 31 * fs;
+      g.push('</g>'); out.title = g.join('');
+      var wmax = 0; tl.forEach(function (t) { wmax = Math.max(wmax, U.measure(t, tf)); }); wmax = Math.max(wmax, U.measure(kick[0] || '', kf) * 1.1);
+      out.obstacles.push({ x0: 0, y0: 0, x1: mg + wmax + pad, y1: y + 10 * fs + pad });
+    }
+    if (st.keys) {
+      var Ls = 1.0, TWr = Math.round(W * 0.27), TWm = Math.round(W * 0.215);
+      var rd0 = F.legend({ u: 1, s: Ls, x: mg, y: 0, TW: TWr, C: C, names: nm, legend: info.legend, groups: { reading: true } });
+      var mp0 = F.legend({ u: 1, s: Ls, x: W - mg - TWm, y: 0, TW: TWm, C: C, names: nm, legend: info.legend, groups: { map: true } });
+      var ff = U.font(nm.text, 9.5 * fs, 400), wb = model.workbook, ls = ['Data: ' + wb.name + ' · ' + model.events.length + ' dated events, ' + model.periods.length + ' periods. Counts describe documented records, not real-world interventions.'];
+      if (pc.credit) ls.push(pc.credit);
+      var cl = []; ls.forEach(function (t) { cl = cl.concat(F.wrapSp(t, ff, 0, TWm, 4)); });
+      var creditH = cl.length * 12.5 * fs + 4 * fs, hasMap = !!info.legend.map;
+      var rdY = W - mg - rd0.bottom, mpH = hasMap ? mp0.bottom : 0, mpY = W - mg - creditH - 6 * fs - mpH;
+      var rd = F.legend({ u: 1, s: Ls, x: mg, y: rdY, TW: TWr, C: C, names: nm, legend: info.legend, groups: { reading: true } });
+      var mp = hasMap ? F.legend({ u: 1, s: Ls, x: W - mg - TWm, y: mpY, TW: TWm, C: C, names: nm, legend: info.legend, groups: { map: true } }) : null;
+      out.keys = '<g id="print-keys">' + rd.svg + (mp ? mp.svg : '') + '</g>';
+      out.credit = '<g id="print-credit">' + F.lines(cl, W - mg - TWm, W - mg - (cl.length - 1) * 12.5 * fs - 2 * fs, 12.5 * fs, 9.5 * fs, { family: nm.S, fill: C.muted }) + '</g>';
+      out.obstacles.push({ x0: mg - pad, y0: rdY - pad, x1: mg + TWr + pad, y1: W });
+      out.obstacles.push({ x0: W - mg - TWm - pad, y0: (hasMap ? mpY : W - mg - creditH) - pad, x1: W, y1: W });
+      out.keyInfo = { Ls: Ls, readingTop: Math.round(rdY), mapTop: Math.round(mpY), fits: rdY > W * 0.5 && mpY > W * 0.5 };
+    }
+    return out;
+  }
+
+  /* ---------------- the figure ---------------------------------------------------------------- */
+  var KEYX = 150;      // the keys start this far (x type scale) right of the left column's edge: the left column of labels runs down the sheet beside them
+  R.figure = function (model, config, built) {
+    var b = built || R.build(model, config), st = b.st, C = b.C, info = b.render.info, ring = info.ring, W = b.W, fs = st.type, m = Math.round(2 / st.unit), nm = names(config), out = [];
+    var inner = b.render.svg.replace(/^[\s\S]*?<title>[\s\S]*?<\/title>/, '').replace(/<\/svg>\s*$/, '').replace(/<rect id="background"[^>]*\/>/, '');
+    out.push(inner);
+    if (b.radial) {
+      if (b.parts) out.push(b.parts.title, b.parts.keys, b.parts.credit);
+      var svgR = wrapSvg(out.join('\n'), W, W, st.mm, st.mm, nm.S, (config.poster.title || 'Chronogram') + ' · figure ' + st.mm + ' x ' + st.mm + ' mm', b.fontCss, st.paper === 'paper', C);
+      return { svg: svgR, W: W, H: W, wmm: st.mm, hmm: st.mm, info: info, keys: b.parts ? b.parts.keyInfo : null, titleBottom: 0, topFree: 0 };
+    }
+    var tone = F.tones(C), pc = config.poster;
+    // the title block: in the free band above the ring, at the left
+    var topEnd = ring ? ring.cy - ring.Rout - 14 * fs : 0, titleBottom = m;
+    if (st.title && ring) {
+      var tw = Math.min(W * 0.46, 560), y = m + 2;
+      out.push('<g id="print-title">');
+      out.push('<rect x="' + f(m) + '" y="' + f(y) + '" width="' + f(34 * fs) + '" height="' + f(3.4 * fs) + '" fill="' + tone.tab + '"/>');
+      var kf = U.font(nm.text, 10.5 * fs, 700), kick = F.wrapSp(String(pc.kicker || '').toUpperCase(), kf, 1.3 * fs, tw, 1);
+      y += 3.4 * fs + 16 * fs;
+      out.push(F.lines(kick, m, y, 13 * fs, 10.5 * fs, { family: nm.S, weight: 700, ls: 1.3 * fs, fill: tone.body }));
+      var tf = U.font(nm.title, 30 * fs, 700), tl = F.wrapSp(pc.title, tf, -0.6 * fs, tw, 2);
+      y += 32 * fs;
+      out.push(F.lines(tl, m, y, 33 * fs, 30 * fs, { family: nm.T, weight: 700, ls: -0.6 * fs, fill: C.ink }));
+      y += (tl.length - 1) * 33 * fs;
+      var df = U.font(nm.text, 11.5 * fs, 400), desc = F.wrapSp(pc.subtitle, df, 0, tw, 3);
+      if (desc.length) { y += 20 * fs; out.push(F.lines(desc, m, y, 15 * fs, 11.5 * fs, { family: nm.S, fill: tone.body })); y += (desc.length - 1) * 15 * fs; }
+      out.push('</g>');
+      titleBottom = y;
+    }
+    // the keys: below the ring
+    var keysTop = ring ? ring.zoneBottom + 6 * fs : W, keysBottom = W - m, keyInfo = null;
+    if (st.keys && ring) {
+      var kx0 = Math.round(ring.cx - ring.Rout - ring.gutter + KEYX * fs), room = keysBottom - keysTop, TWr = Math.round(W * 0.30), TWm = Math.round(W * 0.25), Ls = 1.1, rd, mp;
+      for (; Ls >= 0.9; Ls = Math.round((Ls - 0.05) * 100) / 100) {
+        rd = F.legend({ u: 1, s: Ls, x: kx0, y: keysTop, TW: TWr, C: C, names: nm, legend: info.legend, groups: { reading: true } });
+        mp = F.legend({ u: 1, s: Ls, x: kx0 + TWr + Math.round(W * 0.045), y: keysTop, TW: TWm, C: C, names: nm, legend: info.legend, groups: { map: true } });
+        if (Math.max(rd.bottom, mp.bottom) - keysTop <= room) break;
+      }
+      out.push('<g id="print-keys">' + rd.svg + (info.legend.map ? mp.svg : '') + '</g>');
+      keyInfo = { Ls: Ls, bottom: Math.max(rd.bottom, mp.bottom), room: room, fits: Math.max(rd.bottom, mp.bottom) <= keysBottom + 0.5 };
+      // data and credit lines, bottom right
+      var wb = model.workbook, ls = ['Data: ' + wb.name + ' · ' + model.events.length + ' dated events, ' + model.periods.length + ' periods. Counts describe documented records, not real-world interventions.'];
+      if (pc.credit) ls.push(pc.credit);
+      var ff = U.font(nm.text, 9.5 * fs, 400), cw = Math.round(W * 0.30), lines = [];
+      ls.forEach(function (t) { lines = lines.concat(F.wrapSp(t, ff, 0, cw, 3)); });
+      var cx0 = W - m - cw, cy0 = keysBottom - (lines.length - 1) * 12.5 * fs - 2 * fs;
+      out.push('<g id="print-credit">' + F.lines(lines, cx0, cy0, 12.5 * fs, 9.5 * fs, { family: nm.S, fill: C.muted }) + '</g>');
+    }
+    var svg = wrapSvg(out.join('\n'), W, W, st.mm, st.mm, nm.S, (pc.title || 'Chronogram') + ' · figure ' + st.mm + ' x ' + st.mm + ' mm', b.fontCss, st.paper === 'paper', C);
+    return { svg: svg, W: W, H: W, wmm: st.mm, hmm: st.mm, info: info, keys: keyInfo, titleBottom: titleBottom, topFree: topEnd };
+  };
+
+  /* ---------------- the legend ---------------------------------------------------------------- */
+  R.legend = function (model, config, built) {
+    var b = built || R.build(model, config), st = b.st, C = b.C, info = b.render.info, fs = st.type, nm = names(config), tone = F.tones(C), pc = config.poster;
+    var W = Math.round(st.legendW / st.unit), H = Math.round(st.legendH / st.unit), m = Math.round(2.8 / st.unit), gap = Math.round(4.4 / st.unit);
+    var colW = (W - 2 * m - gap) / 2, MK = P.marker, out = [], L = info.legend, idx = info.index || {};
+    var evs = model.events.filter(function (e) { return e.title; }).sort(function (a, c) { return a.seq - c.seq; });
+    var head = function (x, y, t) { return F.text(x, y, t, 10.5 * fs, { family: nm.S, weight: 700, ls: 1.3 * fs, fill: C.muted }); };
+
+    /* header */
+    var y = m + 2;
+    out.push('<rect x="' + f(m) + '" y="' + f(y) + '" width="' + f(34 * fs) + '" height="' + f(3.4 * fs) + '" fill="' + tone.tab + '"/>');
+    y += 3.4 * fs + 16 * fs;
+    out.push(F.text(m, y, 'LEGEND · ' + String(pc.kicker || '').toUpperCase(), 10.5 * fs, { family: nm.S, weight: 700, ls: 1.3 * fs, fill: tone.body }));
+    y += 28 * fs;
+    var tl = F.wrapSp(pc.title, U.font(nm.title, 26 * fs, 700), -0.5 * fs, W - 2 * m, 2);
+    out.push(F.lines(tl, m, y, 29 * fs, 26 * fs, { family: nm.T, weight: 700, ls: -0.5 * fs, fill: C.ink })); y += (tl.length - 1) * 29 * fs;
+    y += 17 * fs;
+    var how = F.wrapSp('№ is the record number in date order, the same on the circle. The symbol and its colour give the category of action.', U.font(nm.text, 11 * fs, 400), 0, W - 2 * m, 2);
+    out.push(F.lines(how, m, y, 14.5 * fs, 11 * fs, { family: nm.S, fill: tone.body })); y += (how.length - 1) * 14.5 * fs;
+    y += 26 * fs;
+
+    /* symbols: the categories in two columns */
+    out.push(head(m, y, 'SYMBOLS · CATEGORY OF ACTION · RECORDS')); y += 15 * fs;
+    var cats = L.categories, half = Math.ceil(cats.length / 2), rowH = 19 * fs, fRow = 12.5 * fs, yc = y, ymax = y;
+    cats.forEach(function (c, i) {
+      var col = i < half ? 0 : 1, row = i < half ? i : i - half, x0 = m + col * (colW + gap), cyc = yc + row * rowH + rowH / 2;
+      out.push(MK(c.shape, x0 + 7 * fs, cyc, 11 * fs, c.color, C.ink, f(0.8 * fs)));
+      out.push(F.text(x0 + 20 * fs, cyc + 4.4 * fs, c.label, fRow, { family: nm.S, fill: tone.body }));
+      out.push(F.text(x0 + colW, cyc + 4.4 * fs, String(c.n), fRow, { family: nm.S, weight: 600, anchor: 'end', fill: C.muted }));
+      ymax = Math.max(ymax, yc + (row + 1) * rowH);
+    });
+    y = ymax + 16 * fs;
+
+    /* periods lettered on the arcs: two columns */
+    if (L.periods.length) {
+      out.push(head(m, y, 'PERIODS · LETTERED ON THE ARCS')); y += 6 * fs;
+      var ph = Math.ceil(L.periods.length / 2), Lp = fs * 0.92, yb = y, yEnd = y;
+      [L.periods.slice(0, ph), L.periods.slice(ph)].forEach(function (list, ci) {
+        if (!list.length) return;
+        var r = F.periodRows({ u: 1, s: Lp, x: m + ci * (colW + gap), y: yb, TW: colW, C: C, names: nm, list: list });
+        out.push(r.svg); yEnd = Math.max(yEnd, r.bottom);
+      });
+      y = yEnd + 12 * fs;
+    }
+
+    /* the keys of the circle and of the map (with its gradient), and the credit: everything the figure does not carry */
+    var Lk = 1.0, rdK = F.legend({ u: 1, s: Lk, x: m, y: y, TW: colW, C: C, names: nm, legend: L, groups: { reading: true } }),
+      mpK = L.map ? F.legend({ u: 1, s: Lk, x: m + colW + gap, y: y, TW: colW, C: C, names: nm, legend: L, groups: { map: true } }) : null;
+    out.push(rdK.svg); if (mpK) out.push(mpK.svg);
+    y = Math.max(rdK.bottom, mpK ? mpK.bottom : 0) + 8 * fs;
+    var wb = model.workbook, fCr = U.font(nm.text, 9.5 * fs, 400), crl = [], crText = ['Data: ' + wb.name + ' · ' + model.events.length + ' dated events, ' + model.periods.length + ' periods. Counts describe documented records, not real-world interventions.'];
+    var pcred = []; ((b.render.info && b.render.info.radialLabels) || []).forEach(function (x) { var im = x.pic && PCS.images ? PCS.images.get(x.id) : null; if (im && im.credit) pcred.push('№ ' + x.seq + ' ' + im.credit); });
+    if (pcred.length) crText.push('Pictures: ' + pcred.join('; ') + '.');
+    if (pc.credit) crText.push(pc.credit);
+    crText.forEach(function (t) { crl = crl.concat(F.wrapSp(t, fCr, 0, W - 2 * m, 2)); });
+    y += 8 * fs; out.push(F.lines(crl, m, y, 12 * fs, 9.5 * fs, { family: nm.S, fill: C.muted })); y += (crl.length - 1) * 12 * fs + 16 * fs;
+
+    /* records: two columns, as much text as the room allows */
+    out.push(head(m, y, 'RECORDS · IN DATE ORDER')); y += 14 * fs;
+    var top = y, bottom = H - m, avail = bottom - top;
+    var fsT, fnum, numW, symW, tx, fT, fE, fN, lhT, lhE, lhN, tw, rowGap = 5.5 * fs;
+    function setType(k) {      // k: the size of the titles in the type scale (12.6 is 8.5 pt at the default scale)
+      fsT = k * fs; fnum = U.font(nm.text, fsT, 700); numW = Math.max(U.measure('№ 88', fnum), U.measure('№ 42', fnum)) + 2 * fs; symW = 15 * fs; tx = numW + symW;
+      fT = U.font(nm.text, fsT, 700); fE = U.font(nm.text, (k - 0.8) * fs, 400); fN = U.font(nm.text, (k - 1.6) * fs, 400, 'italic');
+      lhT = (k + 1.8) * fs; lhE = (k + 1.4) * fs; lhN = (k + 0.4) * fs; tw = colW - tx;
+    }
+    setType(11.6);
+    function entry(e, nLines, noteMax) {
+      var ix = idx[e.id], t = U.wrap(M.val(e, 'title', config), fT, tw, 3), ex = [], notes = [];
+      if (nLines > 0) { var raw = M.excerpt(e, 90 * nLines + 40); if (raw) ex = U.wrap(raw, fE, tw, nLines); }
+      if (ix && ix.truncated && noteMax > 0) notes = U.wrap('Place: ' + ix.loc, fN, tw, noteMax);
+      var off = !ix && e.date.ok;           // dated, but outside the scale: not on the circle
+      if (off) notes = U.wrap('Before the scale starts, so not on the circle · ' + U.fdate(e.date.start, e.date.precision), fN, tw, 2);
+      if (!e.date.ok) notes = ['No usable date, so not on the circle'];
+      var h = t.length * lhT + (ex.length ? 2 * fs + ex.length * lhE : 0) + (notes.length ? 1.5 * fs + notes.length * lhN : 0);
+      return { e: e, t: t, ex: ex, notes: notes, h: h + rowGap };
+    }
+    function layout(nLines, noteMax) {
+      var list = evs.map(function (e) { return entry(e, nLines, noteMax); }), total = list.reduce(function (a, c) { return a + c.h; }, 0), acc = 0, k = 0;
+      // the first column takes as many as bring it closest to half the total
+      for (k = 0; k < list.length; k++) { if (acc + list[k].h / 2 > total / 2) break; acc += list[k].h; }
+      var c1 = list.slice(0, k), c2 = list.slice(k), h1 = acc, h2 = total - acc;
+      return { c1: c1, c2: c2, h: Math.max(h1, h2) - rowGap };
+    }
+    // the largest type at which every title and the full place of every cut record fit
+    var chosenK = 11.6; [12.6, 12.2, 11.8, 11.4].some(function (k) { setType(k); if (layout(0, 3).h <= avail) { chosenK = k; return true; } return false; }); setType(chosenK);
+    var want = st.text === 'auto' ? 3 : Math.max(0, Math.min(3, +st.text || 0)), pick = null, n = want, nmx = 3;
+    // the full place of a record the figure had to cut comes first; the lines of text give way before it, and it shortens only when the sheet is full
+    search: for (nmx = 3; nmx >= 0; nmx--) for (n = want; n >= 0; n--) { var lt = layout(n, nmx); if (lt.h <= avail) { pick = lt; break search; } }
+    var overflow = false;
+    if (!pick) { pick = layout(0, 0); overflow = pick.h > avail + 0.5; n = 0; nmx = 0; }
+    [pick.c1, pick.c2].forEach(function (col, ci) {
+      var x0 = m + ci * (colW + gap), yy = top;
+      col.forEach(function (it, i) {
+        var e = it.e, cat = M.category(e, config), y1 = yy + 10 * fs;
+        if (i) out.push('<line x1="' + f(x0) + '" x2="' + f(x0 + colW) + '" y1="' + f(yy - rowGap / 2) + '" y2="' + f(yy - rowGap / 2) + '" stroke="' + C.rule + '" stroke-width="' + f(0.5 * fs) + '"/>');
+        out.push(F.text(x0, y1, '№ ' + e.seq, fsT, { family: nm.S, weight: 700, fill: C.ink }));
+        out.push(MK(cat.shape, x0 + numW + 6 * fs, y1 - 4 * fs, 10.5 * fs, cat.color, C.ink, f(0.8 * fs)));
+        out.push(F.lines(it.t, x0 + tx, y1, lhT, fsT, { family: nm.S, weight: 700, fill: C.ink }));
+        var y2 = y1 + (it.t.length - 1) * lhT;
+        if (it.ex.length) { y2 += 2 * fs + lhE - 1 * fs; out.push(F.lines(it.ex, x0 + tx, y2, lhE, fE.size || (chosenK - 0.8) * fs, { family: nm.S, fill: tone.body })); y2 += (it.ex.length - 1) * lhE; }
+        if (it.notes.length) { y2 += 1.5 * fs + lhN - 1 * fs; out.push(F.lines(it.notes, x0 + tx, y2, lhN, (chosenK - 1.6) * fs, { family: nm.S, italic: true, fill: C.muted })); }
+        yy += it.h;
+      });
+    });
+    var svg = wrapSvg('<g id="print-legend">' + out.join('\n') + '</g>', W, H, st.legendW, st.legendH, nm.S, (pc.title || 'Chronogram') + ' · legend ' + st.legendW + ' x ' + st.legendH + ' mm', b.fontCss, st.paper === 'paper', C);
+    return { svg: svg, W: W, H: H, wmm: st.legendW, hmm: st.legendH, textLines: n, noteLines: nmx, overflow: overflow, records: evs.length, used: top + pick.h, bottom: bottom };
+  };
+
+  /* ---------------- what the print will look like: the real sizes, from the drawing itself ---------------- */
+  /** Type sizes in points and line weights in millimetres, read from an SVG string made by R.figure or R.legend. */
+  R.spec = function (svg, unit) {
+    var sizes = {}, minPt = Infinity, strokes = [], mm = unit;
+    String(svg).replace(/font-size="([\d.]+)"/g, function (_, v) { var pt = Math.round(+v * mm * MM2PT * 10) / 10; sizes[pt] = (sizes[pt] || 0) + 1; if (pt < minPt) minPt = pt; return ''; });
+    String(svg).replace(/stroke-width="([\d.]+)"/g, function (_, v) { strokes.push(+v * mm); return ''; });
+    strokes = strokes.filter(function (v) { return v > 0; });
+    return { minPt: minPt === Infinity ? 0 : minPt, sizes: sizes, minStrokeMm: strokes.length ? Math.round(Math.min.apply(null, strokes) * 1000) / 1000 : 0 };
+  };
+
+  /* ---------------- files ---------------------------------------------------------------------- */
+  function baseName(model) { return (model.workbook.name || 'chronogram').replace(/\.[^.]+$/, '').replace(/[^\w-]+/g, '_'); }
+  R.fileNames = function (model, st) { var b = baseName(model); return { figure: b + '_print_figure_' + st.mm + 'x' + st.mm + 'mm', legend: b + '_print_legend_' + st.legendW + 'x' + st.legendH + 'mm' }; };
+  /** Rasterise an SVG made here at a resolution (dpi) of the printed size. */
+  R.raster = function (svg, wmm, hmm, dpi, paper) {
+    return new Promise(function (resolve, reject) {
+      var pxW = Math.round(wmm / 25.4 * dpi), pxH = Math.round(hmm / 25.4 * dpi);
+      var s = svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="' + pxW + '" height="' + pxH + '"');
+      var url = URL.createObjectURL(new Blob([s], { type: 'image/svg+xml;charset=utf-8' })), img = new Image();
+      img.onload = function () {
+        try {
+          var c = document.createElement('canvas'); c.width = pxW; c.height = pxH; var ctx = c.getContext('2d');
+          if (paper) { ctx.fillStyle = paper; ctx.fillRect(0, 0, pxW, pxH); }
+          ctx.drawImage(img, 0, 0, pxW, pxH); URL.revokeObjectURL(url);
+          c.toBlob(function (bl) { bl ? resolve(bl) : reject(new Error('The browser could not encode a PNG this large. Try a lower resolution.')); }, 'image/png');
+        } catch (e) { reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Could not rasterise the drawing.')); };
+      img.src = url;
+    });
+  };
+  /** A PDF of one drawing at its exact size, through the browser's own print dialog (choose "Save as PDF", margins "None"). */
+  R.printPdf = function (svg, wmm, hmm, title) {
+    return new Promise(function (resolve) {
+      var fr = document.createElement('iframe'); fr.setAttribute('aria-hidden', 'true');
+      fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none';
+      document.body.appendChild(fr);
+      var d = fr.contentWindow.document;
+      d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>@page{size:' + f(wmm) + 'mm ' + f(hmm) + 'mm;margin:0}html,body{margin:0;padding:0;background:#fff}svg{display:block;width:' + f(wmm) + 'mm;height:' + f(hmm) + 'mm}</style></head><body>' + svg + '</body></html>'); d.close();
+      setTimeout(function () {
+        try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { /* ignore */ }
+        setTimeout(function () { fr.remove(); resolve(); }, 4000);
+      }, 400);
+    });
+  };
+
+  /** Export entry points used by the Export menu. kind: 'fig-svg' | 'leg-svg' | 'both-png' | 'fig-pdf' | 'leg-pdf' | 'both-svg' */
+  R.exportKind = async function (model, config, kind) {
+    var b = R.build(model, config), st = b.st, fn = R.fileNames(model, st), fig = R.figure(model, config, b), leg = R.legend(model, config, b);
+    var head = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    if (kind === 'fig-svg') { U.download(fn.figure + '.svg', head + fig.svg, 'image/svg+xml;charset=utf-8'); return 'Figure saved: ' + st.mm + ' x ' + st.mm + ' mm, vector.'; }
+    if (kind === 'leg-svg') { U.download(fn.legend + '.svg', head + leg.svg, 'image/svg+xml;charset=utf-8'); return 'Legend saved: ' + st.legendW + ' x ' + st.legendH + ' mm, vector.'; }
+    if (kind === 'both-svg') {
+      var enc = new TextEncoder();
+      U.download(baseName(model) + '_print_figure_and_legend_svg.zip', PCS.present._zip([{ name: fn.figure + '.svg', data: enc.encode(head + fig.svg) }, { name: fn.legend + '.svg', data: enc.encode(head + leg.svg) }]), 'application/zip');
+      return 'Figure and legend saved as SVG (' + st.mm + ' x ' + st.mm + ' and ' + st.legendW + ' x ' + st.legendH + ' mm) in one .zip.';
+    }
+    if (kind === 'both-png') {
+      var paper = st.paper === 'paper' ? b.C.bg : '#ffffff', dpi = 300;
+      var a = await R.raster(fig.svg, st.mm, st.mm, dpi, paper), c = await R.raster(leg.svg, st.legendW, st.legendH, dpi, paper);
+      var files = [{ name: fn.figure + '_300dpi.png', data: new Uint8Array(await a.arrayBuffer()) }, { name: fn.legend + '_300dpi.png', data: new Uint8Array(await c.arrayBuffer()) }];
+      U.download(baseName(model) + '_print_figure_and_legend_300dpi.zip', PCS.present._zip(files), 'application/zip');
+      return 'Figure and legend saved as PNG, 300 dpi at the printed size, in one .zip.';
+    }
+    if (kind === 'fig-pdf') { await R.printPdf(fig.svg, st.mm, st.mm, fn.figure); return 'In the print dialog choose Save as PDF, paper size as set, margins None.'; }
+    if (kind === 'leg-pdf') { await R.printPdf(leg.svg, st.legendW, st.legendH, fn.legend); return 'In the print dialog choose Save as PDF, paper size as set, margins None.'; }
+    throw new Error('Unknown print export: ' + kind);
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -10798,6 +11400,34 @@ window.PCS.DEFAULT_LOCATIONS = [
       if (model.meta.title) b.appendChild(h('div', { class: 'hint' }, 'Workbook “Timeline” sheet: “' + esc(model.meta.title) + '” / “' + esc(model.meta.subtitle) + '”.'));
     }));
 
+    host.appendChild(section('print', 'Print figure · A0 insert', function (b) {
+      var R = PCS.print, st = R.settings(cfg);
+      b.appendChild(h('div', { class: 'hint' }, 'The chronogram at true size for a printed sheet: a figure of ' + st.mm + ' × ' + st.mm + ' mm that is the diagram alone (symbol, number, date and place on each record) and a legend of ' + st.legendW + ' × ' + st.legendH + ' mm that carries the title, every key, the map gradient, the credit and the records. Type is sized in points, lines in millimetres. Export → Print figure.'));
+      b.appendChild(field('Labels', seg('print.labels', [['radial', 'Radial', 'Each label runs along the radius from its record, no leader lines'], ['columns', 'Columns', 'Two columns with leader lines']])));
+      b.appendChild(field('Figure side (mm)', bindInput('number', 'print.mm', { min: 100, max: 1200, step: 1 })));
+      b.appendChild(field('Legend width (mm)', bindInput('number', 'print.legendW', { min: 60, max: 600, step: 1 })));
+      b.appendChild(field('Legend height (mm)', bindInput('number', 'print.legendH', { min: 100, max: 1200, step: 1 })));
+      if (cfg.print.labels !== 'columns') b.appendChild(field('Time scale diameter: ' + st.axisMm + ' mm', bindInput('range', 'print.axisMm', { min: 200, max: 260, step: 1 }), 'The circle with the months and years. Not below 240 mm in the brief; a larger circle leaves the labels less room.'));
+      b.appendChild(field('Time scale of the circle', seg('print.scale', [['overview', 'Overview', 'Event days spaced evenly in date order, not to scale: the dense weeks open up'], ['studio', 'As the studio', 'Whatever the Time scale and focus panel is set to']])));
+      b.appendChild(checkbox('Pictures of the records between the symbol and the number', 'print.pictures'));
+      if (cfg.print.pictures !== false) b.appendChild(field('Largest picture: ' + (cfg.print.pictureMm || 12) + ' mm', bindInput('range', 'print.pictureMm', { min: 6, max: 30, step: 1 }), 'Each picture is as large as the room along its label allows, up to this side, and never under 6 mm (it is left out where it cannot be). A smaller time circle leaves more room.'));
+      b.appendChild(field('Periods left out', bindInput('text', 'print.skip', { placeholder: 'Temporary Public Space Repair' }), 'Period names (or the letters the legend shows), separated by semicolons. The other periods keep their letters.'));
+      b.appendChild(field('Type scale: ' + st.type.toFixed(2), bindInput('range', 'print.type', { min: 0.9, max: 1.6, step: 0.05 }), '1.2 gives 7.5 pt for the date and place on the figure and 8.5 pt for the titles in the legend.'));
+      b.appendChild(checkbox('Also put the title block on the figure (it is always on the legend)', 'print.title'));
+      b.appendChild(checkbox('Also put the reading key and map key on the figure (they are always on the legend)', 'print.keys'));
+      b.appendChild(field('Text under each record in the legend', bindInput('select', 'print.text', { options: [['auto', 'As many lines as fit'], ['0', 'Titles only'], ['1', '1 line'], ['2', '2 lines'], ['3', '3 lines']] })));
+      b.appendChild(field('Background', bindInput('select', 'print.paper', { options: [['clear', 'None (the sheet shows through)'], ['paper', 'Paper colour']] })));
+      var out = h('div', { class: 'hint', 'aria-live': 'polite' }, 'Press Check to read the real sizes from the drawing.');
+      var go = h('button', { class: 'btn small', type: 'button' }, 'Check sizes');
+      go.onclick = function () {
+        try {
+          var bl = R.build(app.model, cfg), fg = R.figure(app.model, cfg, bl), lg = R.legend(app.model, cfg, bl), sf = R.spec(fg.svg, bl.st.unit), sl = R.spec(lg.svg, bl.st.unit);
+          out.textContent = 'Figure ' + bl.st.mm + ' × ' + bl.st.mm + ' mm: smallest text ' + sf.minPt + ' pt, thinnest line ' + sf.minStrokeMm + ' mm, ' + fg.info.annotated.length + ' labelled records' + (fg.info.offRange.length ? ' (+' + fg.info.offRange.length + ' off the scale, in the legend)' : '') + '. Legend ' + bl.st.legendW + ' × ' + bl.st.legendH + ' mm: smallest text ' + sl.minPt + ' pt, ' + lg.records + ' records, ' + (lg.overflow ? 'DOES NOT FIT: enlarge the sheet or lower the type scale' : 'fits, ' + (lg.textLines ? lg.textLines + ' line(s) of text each' : 'titles and places only')) + '.';
+        } catch (err) { out.textContent = 'Could not check: ' + err.message; }
+      };
+      b.appendChild(go); b.appendChild(out);
+    }));
+
     host.appendChild(section('export', 'Export settings', function (b) {
       b.appendChild(field('PNG resolution', bindInput('select', 'exportDpi', { options: [['100', '100 dpi'], ['150', '150 dpi'], ['200', '200 dpi'], ['300', '300 dpi (large)']] })));
       b.appendChild(checkbox('Embed fonts in SVG (portable; ~170 KB)', 'poster.embedFonts'));
@@ -12167,10 +12797,13 @@ window.PCS.DEFAULT_LOCATIONS = [
       slides: ['Slides · every drawing', [['deck-png', 'All slides', 'PNG 3840 × 2160 · .zip'], ['deck-svg', 'All slides', 'SVG · .zip']]],
       data: ['Data and settings', [['csv', 'Normalised events', 'CSV'], ['json', 'Normalised data', 'JSON'], ['config', 'Visualisation configuration', 'JSON']]]
     };
+    var ps = PCS.print ? PCS.print.settings(app.config) : { mm: 320, legendW: 160, legendH: 320 }, pm = ps.mm + ' × ' + ps.mm + ' mm', pl = ps.legendW + ' × ' + ps.legendH + ' mm';
+    G.print = ['Print figure · A0 insert', [['print-both-svg', 'Figure and legend', 'SVG · ' + pm + ' and ' + pl + ' · .zip'], ['print-both-png', 'Figure and legend', 'PNG 300 dpi · true size · .zip'], ['print-fig-pdf', 'Figure', 'PDF · ' + pm + ' · print dialog'], ['print-leg-pdf', 'Legend', 'PDF · ' + pl + ' · print dialog'], ['print-fig-svg', 'Figure only', 'SVG'], ['print-leg-svg', 'Legend only', 'SVG']]];
     G.embed = ['Embed · interactive web page', [['embed-chronogram', 'Chronogram', 'with its information panel'], ['embed-actors', 'Institutions and people', 'cards, each with its details'], ['embed-money', 'Money · bars', 'amounts on the timeline'], ['embed-circles', 'Money · circles', 'amounts as circles']]];
     var first = { poster: 'poster', animation: 'animation', money: 'money' }[app.view] || 'data';
-    var order = [first].concat(['poster', 'animation', 'money', 'embed', 'slides', 'data'].filter(function (k) { return k !== first; }));
+    var order = [first].concat(['poster', 'print', 'animation', 'money', 'embed', 'slides', 'data'].filter(function (k) { return k !== first; }));
     if (first === 'poster' || first === 'money') order.splice(1, 0, order.splice(order.indexOf('embed'), 1)[0]);       // the embed of the open drawing sits right under its exports
+    if (first === 'poster') order.splice(2, 0, order.splice(order.indexOf('print'), 1)[0]);       // the print figure is the poster's own second form
     $('export-menu').innerHTML = order.map(function (k, i) {
       return '<div class="menu-h">' + G[k][0] + (i === 0 ? '<span class="m-now">this view</span>' : '') + '</div>' + G[k][1].map(function (it) {
         return '<button data-export="' + it[0] + '"><span>' + it[1] + '</span><span class="m-sub">' + it[2] + '</span></button>';
@@ -12194,6 +12827,7 @@ window.PCS.DEFAULT_LOCATIONS = [
       if (kind === 'import-config') $('file-config').click();
       if (/^money-/.test(kind)) await PCS.moneyMap.exportKind(kind.slice(6));
       if (/^embed-/.test(kind)) await PCS.embed.open(kind.slice(6));
+      if (/^print-/.test(kind)) app.toast(await PCS.print.exportKind(m, c, kind.slice(6)));
       if (/^deck-/.test(kind)) await PCS.present.exportDeck(kind.slice(5));
       if (/^anim-/.test(kind)) await PCS.animUI.exportKind(kind.slice(5));
     } catch (err) { console.error(err); app.toast('Export failed: ' + err.message, true); }

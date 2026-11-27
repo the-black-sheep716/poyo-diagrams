@@ -3104,7 +3104,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     if (mode === 'linear' || !knots) {
       mode = 'linear';
       knots = [[t0, a0], [t1, a1]];
-      text = 'True time scale: angle is proportional to elapsed time. 1° = ' + fmtDays(daysPerDegree(knots[0], knots[1])) + '; full sweep ' + U.fdate(rg.start) + ' – ' + U.fdate(rg.end) + '.';
+      text = 'True time scale: angle is proportional to elapsed time. 1° = ' + fmtDays(daysPerDegree(knots[0], knots[1])) + '; full sweep ' + U.fdate(rg.start) + PCS.storm.to() + U.fdate(rg.end) + '.';
     }
     return {
       mode: mode, knots: knots, a0: a0, a1: a1, start: rg.start, end: rg.end, t0: t0, t1: t1, why: rg.why, text: text,
@@ -3407,9 +3407,9 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     // datums
     (o.datums || []).forEach(function (d) {
       if (d.t < t0 || d.t > t1) return;
-      s.push('<line x1="' + f(tx(d.t)) + '" x2="' + f(tx(d.t)) + '" y1="' + f(py0) + '" y2="' + f(py1) + '" stroke="' + C.accent + '" stroke-width="' + f(1.4 * fs) + '" stroke-dasharray="' + f(5 * fs) + ' ' + f(3 * fs) + '"/>');
+      s.push('<line x1="' + f(tx(d.t)) + '" x2="' + f(tx(d.t)) + '" y1="' + f(py0) + '" y2="' + f(py1) + '" stroke="' + (C.datum || C.accent) + '" stroke-width="' + f(1.4 * fs) + '" stroke-dasharray="' + f(5 * fs) + ' ' + f(3 * fs) + '"/>');
       var dl = d.label.toUpperCase(), dw = U.measure(dl, U.font(o.famM.split("'")[1], 10.5 * fs)) + dl.length * 0.3, left = tx(d.t) + 5 * fs + dw > o.x + o.w + 4 * fs;   // the label turns to the left of its line at the right-hand edge
-      s.push('<text x="' + f(tx(d.t) + (left ? -5 : 5) * fs) + '" y="' + f(py0 + 11 * fs) + '"' + (left ? ' text-anchor="end"' : '') + ' font-family="' + o.famM + '" font-size="' + f(10.5 * fs) + '" fill="' + C.accent + '">' + esc(dl) + '</text>');
+      s.push('<text x="' + f(tx(d.t) + (left ? -5 : 5) * fs) + '" y="' + f(py0 + 11 * fs) + '"' + (left ? ' text-anchor="end"' : '') + ' font-family="' + o.famM + '" font-size="' + f(10.5 * fs) + '" fill="' + (C.datum || C.accent) + '">' + esc(dl) + '</text>');
     });
 
     // x axis: years and months
@@ -3427,7 +3427,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     // title + definition
     var fT = U.font(o.famS.split("'")[1], 15 * fs, 700);
     var titleW = U.measure(title, fT);
-    s.push('<text x="' + f(o.x) + '" y="' + f(o.y + 6 * fs) + '" font-family="' + o.famS + '" font-weight="700" font-size="' + f(15 * fs) + '" fill="' + C.ink + '">' + esc(title) + '</text>');
+    s.push('<text x="' + f(o.x) + '" y="' + f(o.y + 6 * fs) + '" font-family="' + o.famS + '" font-weight="700" font-size="' + f((o.famS.indexOf("'Arial'") === 0 ? 11.5 : 15) * fs) + '" fill="' + C.ink + '"' + (o.famS.indexOf("'Arial'") === 0 ? ' letter-spacing="' + f(1.15 * fs) + '">' + esc(String(title).toUpperCase()) : '>' + esc(title)) + '</text>');
     var dn = o.defLines === undefined ? 2 : o.defLines;      // 0: no definition under the title (only a warning, when there is one)
     var defLines = dn === 0 && !warn ? [] : U.wrap(dn === 0 ? warn : def + (warn ? ' ' + warn : ''), U.font(o.famS.split("'")[1], 12 * fs), o.w - 20, dn || 2);
     defLines.forEach(function (l, i) { s.push('<text x="' + f(o.x) + '" y="' + f(o.y + 24 * fs + i * 15 * fs) + '" font-family="' + o.famS + '" font-size="' + f(12 * fs) + '" fill="' + (warn && i === defLines.length - 1 ? C.accent : C.muted) + '">' + esc(l) + '</text>'); });
@@ -3574,7 +3574,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     var byMun = MP.recordsByMunicipality(model, config);
     var s = ['<g id="map">'];
     s.push('<defs><clipPath id="' + cid + '"><circle cx="' + f(o.cx) + '" cy="' + f(o.cy) + '" r="' + f(o.R) + '"/></clipPath>' +
-      '<pattern id="marsh-' + cid + '" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="' + C.water + '" stroke-width="1" stroke-opacity="0.85"/></pattern></defs>');
+      '<pattern id="marsh-' + cid + '" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="' + (C.marsh || C.water) + '" stroke-width="1" stroke-opacity="0.85"/></pattern></defs>');
     s.push('<g clip-path="url(#' + cid + ')">');
     s.push('<circle cx="' + f(o.cx) + '" cy="' + f(o.cy) + '" r="' + f(o.R) + '" fill="' + C.bg + '"/>');
     // municipalities (shaded by number of records naming them)
@@ -3613,12 +3613,12 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       s.push('<path id="map-mask" d="' + md + '" fill="' + C.bg + '" fill-opacity="0.55" fill-rule="evenodd"/>');
     }
     if (mc.hydro !== false && bigWater) {
-      s.push('<g id="map-sea"><path d="' + bigWater + '" fill="' + C.water + '" stroke="' + U.color.mix(C.water, C.ink, 0.35) + '" stroke-width="' + f(0.9 * fs) + '" stroke-linejoin="round"/>');
+      s.push('<g id="map-sea"><path d="' + bigWater + '" fill="' + (C.sea || C.water) + '" stroke="' + (C.seaLine || U.color.mix(C.water, C.ink, 0.35)) + '" stroke-width="' + f(0.9 * fs) + '" stroke-linejoin="round"/>');
       (B.labels || []).forEach(function (lb) {
         var x = P.x(lb.xy[0]), y = P.y(lb.xy[1]);
         if (Math.hypot(x - o.cx, y - o.cy) > o.R - 14 * fs) return;
         if (o.fitLabels && Math.hypot(x - o.cx, y - o.cy) + U.measure(lb.text, U.font('Inter', 11.5 * fs, 500, 'italic')) / 2 > o.R - 3) return;      // print: not cut by the edge of the map
-        s.push('<text transform="translate(' + f(x) + ' ' + f(y) + ') rotate(' + (lb.rot || 0) + ')" text-anchor="middle" dy="0.35em" font-family="' + o.famS + '" font-style="italic" font-weight="500" font-size="' + f(11.5 * fs) + '" letter-spacing="' + f(lb.kind === 'sea' ? 2.2 * fs : 0.4 * fs) + '" fill="' + U.color.on(C.water, C.ink, C.bg) + '">' + esc(lb.text) + '</text>');
+        s.push('<text transform="translate(' + f(x) + ' ' + f(y) + ') rotate(' + (lb.rot || 0) + ')" text-anchor="middle" dy="0.35em" font-family="' + o.famS + '" font-style="italic" font-weight="500" font-size="' + f(11.5 * fs) + '" letter-spacing="' + f(lb.kind === 'sea' ? 2.2 * fs : 0.4 * fs) + '" fill="' + U.color.on(C.sea || C.water, C.ink, C.bg) + '">' + esc(lb.text) + '</text>');
       });
       s.push('</g>');
     }
@@ -3780,7 +3780,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       phase: function (cx, cyc) { var sw = 26 * Ls / L.phaseScale.length; return L.phaseScale.map(function (c, i) { return '<rect x="' + f(cx - 13 * Ls + i * sw) + '" y="' + f(cyc - 6 * Ls) + '" width="' + f(sw + 0.4) + '" height="' + f(12 * Ls) + '" fill="' + c + '"/>'; }).join(''); },
       feat: function (cx, cyc) { return rect(cx, cyc, 26 * Ls, 12 * Ls, L.featuredColour); },
       span: function (cx, cyc) { return hline(cx - 13 * Ls, cx + 13 * Ls, cyc, C.ink, 3 * Ls) + '<line x1="' + f(cx - 13 * Ls) + '" x2="' + f(cx - 13 * Ls) + '" y1="' + f(cyc - 6 * Ls) + '" y2="' + f(cyc + 6 * Ls) + '" stroke="' + C.ink + '" stroke-width="' + f(1.5 * Ls) + '"/>'; },
-      datum: function (cx, cyc) { return hline(cx - 13 * Ls, cx + 13 * Ls, cyc, C.accent, 2 * Ls, f(5 * Ls) + ' ' + f(3 * Ls)); },
+      datum: function (cx, cyc) { return hline(cx - 13 * Ls, cx + 13 * Ls, cyc, C.datum || C.accent, 2 * Ls, f(5 * Ls) + ' ' + f(3 * Ls)); },
       emph: function (cx, cyc) { return rect(cx, cyc, 26 * Ls, 12 * Ls, C.accent2, null, 0, 0.35); }
     };
   }
@@ -4157,7 +4157,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     function footLines() {
       var wb = model.workbook, ls = ['Data: ' + wb.name + ' · ' + model.events.length + ' dated events, ' + model.periods.length + ' periods. Counts describe documented records, not real-world interventions.'];
       if (config.poster.credit) ls.push(config.poster.credit);
-      ls.push('Inter and Inter Display (SIL OFL).' + (PCS.BASEMAP ? ' Map: GLA305 QGIS layers (Poyo sub-basins), INE boundaries, hydrography, OpenStreetMap places.' : ''));
+      ls.push(PCS.storm.sources('Inter and Inter Display (SIL OFL).' + (PCS.BASEMAP ? ' Map: GLA305 QGIS layers (Poyo sub-basins), INE boundaries, hydrography, OpenStreetMap places.' : ''), config));
       return ls;
     }
 
@@ -4170,9 +4170,9 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       s.push('<g id="panel"><rect x="' + f(G.PX) + '" y="0" width="' + f(Math.max(1, u)) + '" height="' + H + '" fill="' + C.rule + '"/>');
       var nDated = model.events.filter(function (e) { return e.date.ok; }).length;
       s.push(F.text(px, G.KB, nDated + ' DATED RECORDS' + (info.annotated.length ? ' · ' + info.annotated.length + ' LABELLED' : ''), 15 * u, { family: famS, weight: 700, ls: 1.5 * u, fill: body }));
-      var span = (U.fdate(sc.start, 'month') + ' – ' + U.fdate(sc.end, 'month')).toUpperCase(), sp0 = 38 * u, spW = U.measure(span, U.font(FT, sp0, 700)) + span.length * (-0.02 * sp0);
+      var stm = FT === 'Arial', spWt = stm ? 400 : 700, spLs = stm ? 0.06 : -0.02, span = (U.fdate(sc.start, 'month') + PCS.storm.to() + U.fdate(sc.end, 'month')).toUpperCase(), sp0 = (stm ? 32 : 38) * u, spW = U.measure(span, U.font(FT, sp0, spWt)) + span.length * (spLs * sp0);
       var spS = spW > pw ? sp0 * pw / spW : sp0;
-      s.push(F.text(px, G.TB, span, spS, { family: famT, weight: 700, ls: -0.02 * spS, fill: C.ink }));
+      s.push(F.text(px, G.TB, span, spS, { family: famT, weight: spWt, ls: spLs * spS, fill: C.ink }));
       var y0 = 208 * u;
       var limit = G.bottom;
       var list = info.unannotated.concat(info.offRange.filter(function (e) { return info.unannotated.indexOf(e) < 0; }));
@@ -4479,11 +4479,11 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         datums.forEach(function (dm) {
           if (!sc.inRange(dm.t)) return;
           var a = sc.toAngle(dm.t), p0 = S.pt(cx, cy, Rhub * 0.98, a), p1 = S.pt(cx, cy, Raxis + 14 * fs, a);
-          s.push('<line x1="' + f(p0[0]) + '" y1="' + f(p0[1]) + '" x2="' + f(p1[0]) + '" y2="' + f(p1[1]) + '" stroke="' + C.accent + '" stroke-width="' + f(1.6 * fs) + '" stroke-dasharray="' + f(6 * fs) + ' ' + f(4 * fs) + '"/>');
+          s.push('<line x1="' + f(p0[0]) + '" y1="' + f(p0[1]) + '" x2="' + f(p1[0]) + '" y2="' + f(p1[1]) + '" stroke="' + (C.datum || C.accent) + '" stroke-width="' + f(1.6 * fs) + '" stroke-dasharray="' + f(6 * fs) + ' ' + f(4 * fs) + '"/>');
           var lp = S.pt(cx, cy, Rhub * 0.98 - 8 * fs, a);
           var rot = a - 90, anchor = 'end';
           if (a % 360 > 180) { rot = a + 90; anchor = 'start'; }
-          if (!printMode) s.push('<text x="' + f(lp[0]) + '" y="' + f(lp[1]) + '" transform="rotate(' + f(rot) + ' ' + f(lp[0]) + ' ' + f(lp[1]) + ')" text-anchor="' + anchor + '" dy="0.35em" font-family="' + famM + '" font-size="' + f(12 * fs) + '" letter-spacing="0.6" fill="' + C.accent + '" paint-order="stroke" stroke="' + C.bg + '" stroke-width="' + f(4 * fs) + '" stroke-linejoin="round">' + esc(dm.label.toUpperCase()) + '</text>');
+          if (!printMode) s.push('<text x="' + f(lp[0]) + '" y="' + f(lp[1]) + '" transform="rotate(' + f(rot) + ' ' + f(lp[0]) + ' ' + f(lp[1]) + ')" text-anchor="' + anchor + '" dy="0.35em" font-family="' + famM + '" font-size="' + f(12 * fs) + '" letter-spacing="0.6" fill="' + (C.datum || C.accent) + '" paint-order="stroke" stroke="' + C.bg + '" stroke-width="' + f(4 * fs) + '" stroke-linejoin="round">' + esc(dm.label.toUpperCase()) + '</text>');
         });
         s.push('</g>');
       }
@@ -4718,7 +4718,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
       var e = x.e, cat = M.category(e, config);
       var ov = config.overrides[e.id] || {};
       var dateTxt = U.fdate(e.date.start, e.date.precision);
-      if (ann.showDateRange && e.date.isRange && e.date.end !== undefined) dateTxt += ' – ' + U.fdate(e.date.end, e.date.precision === 'minute' ? 'day' : e.date.precision);
+      if (ann.showDateRange && e.date.isRange && e.date.end !== undefined) dateTxt += PCS.storm.to() + U.fdate(e.date.end, e.date.precision === 'minute' ? 'day' : e.date.precision);
       var metaTop = (ann.showNumbers ? '№ ' + e.seq + '  ·  ' : '') + dateTxt.toUpperCase();
       // a picture beside the date and title (on the circle side, so the leader line meets it)
       var pic = lay.images !== false && PCS.images ? PCS.images.get(e.id) : null;
@@ -4774,7 +4774,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
        The title and the text are in the legend (js/viz/print.js), under the same number and symbol. */
     function indexText(e) {
       var dateTxt = U.fdate(e.date.start, e.date.precision);
-      if (ann.showDateRange && e.date.isRange && e.date.end !== undefined) dateTxt += ' – ' + U.fdate(e.date.end, e.date.precision === 'minute' ? 'day' : e.date.precision);
+      if (ann.showDateRange && e.date.isRange && e.date.end !== undefined) dateTxt += PCS.storm.to() + U.fdate(e.date.end, e.date.precision === 'minute' ? 'day' : e.date.precision);
       var loc = String(M.val(e, 'location', config) || e.derived.parsed.headerLine || '').replace(/\s+/g, ' ').trim();
       return { meta: '№ ' + e.seq + '  ·  ' + dateTxt.toUpperCase(), loc: loc };
     }
@@ -4981,7 +4981,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
         categories: config.categories.filter(function (c) { return counts[c.id]; }).map(function (c) { return { id: c.id, label: c.label, color: c.color, shape: c.shape, n: counts[c.id] }; }),
         reading: readingRows(plan), phaseScale: plan.scale, featuredColour: C.featured, disclosure: sc.text,
         periods: (innerKey || []).slice().sort(function (a, b) { return a.q.t0 - b.q.t0; }).map(function (it) { return { id: it.q.p.id, letter: it.letter || '', title: it.title, short: P.shortTitle(it.q.p, config), dates: it.sub, featured: !!it.featured }; }),
-        map: mapOn ? { steps: PCS.map.steps(C).map(function (s) { return s[1]; }), labels: ['1 record', '2–3', '4–7', '8+'], water: C.water,
+        map: mapOn ? { steps: PCS.map.steps(C).map(function (s) { return s[1]; }), labels: ['1 record', PCS.storm.on(config) ? '2 to 3' : '2–3', PCS.storm.on(config) ? '4 to 7' : '4–7', '8+'], water: C.water,
           selectedColour: config.categories[0].color, pointColour: config.categories[3].color } : null
       };
     }
@@ -5150,8 +5150,8 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
   function periodDates(p) {
     if (!p.date.ok) return 'undated';
     var a = U.fdate(p.date.start, p.date.precision === 'minute' ? 'day' : p.date.precision);
-    if (p.date.openEnd) return a + ' – ongoing';
-    if (p.date.end !== undefined) return a + ' – ' + U.fdate(p.date.end, 'day');
+    if (p.date.openEnd) return a + PCS.storm.to() + 'ongoing';
+    if (p.date.end !== undefined) return a + PCS.storm.to() + U.fdate(p.date.end, 'day');
     return a;
   }
   P.periodDates = periodDates;
@@ -5168,7 +5168,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     lines.push('Categories and statuses are keyword-based suggestions unless set in the workbook or edited by the author' + (edited ? ' (' + edited + ' records edited)' : '') + '. Euro amounts quoted in descriptions are not summed. ' +
       (nW ? nW + ' data-quality warnings remain open in the source workbook (missing source URLs, an untitled record, possibly truncated or copied descriptions; see the app’s Data checks).' : ''));
     if (config.poster.credit) lines.push(config.poster.credit);
-    lines.push('Typeface: Inter and Inter Display (SIL Open Font License).' + (PCS.BASEMAP ? ' Map: GLA305 QGIS layers: Poyo sub-basins, INE municipal boundaries, hydrography, OpenStreetMap places (EPSG:25830).' : ''));
+    lines.push(PCS.storm.sources('Typeface: Inter and Inter Display (SIL Open Font License).' + (PCS.BASEMAP ? ' Map: GLA305 QGIS layers: Poyo sub-basins, INE municipal boundaries, hydrography, OpenStreetMap places (EPSG:25830).' : ''), config));
     return lines;
   }
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -5286,7 +5286,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     var pad = 6 * fs;
     if (st.title) {
       var tw = Math.round(W * 0.3), y = mg + 2, g = ['<g id="print-title">'];
-      g.push('<rect x="' + f(mg) + '" y="' + f(y) + '" width="' + f(34 * fs) + '" height="' + f(3.4 * fs) + '" fill="' + tone.tab + '"/>');
+      g.push('<rect x="' + f(mg) + '" y="' + f(y) + '" width="' + f(nm.text === 'Arial' ? tw : 34 * fs) + '" height="' + f((nm.text === 'Arial' ? 1.6 : 3.4) * fs) + '" fill="' + (nm.text === 'Arial' ? C.ink : tone.tab) + '"/>');
       var kf = U.font(nm.text, 10.5 * fs, 700), kick = F.wrapSp(String(pc.kicker || '').toUpperCase(), kf, 1.3 * fs, tw, 1);
       y += 3.4 * fs + 16 * fs;
       g.push(F.lines(kick, mg, y, 13 * fs, 10.5 * fs, { family: nm.S, weight: 700, ls: 1.3 * fs, fill: tone.body }));
@@ -5335,7 +5335,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     if (st.title && ring) {
       var tw = Math.min(W * 0.46, 560), y = m + 2;
       out.push('<g id="print-title">');
-      out.push('<rect x="' + f(m) + '" y="' + f(y) + '" width="' + f(34 * fs) + '" height="' + f(3.4 * fs) + '" fill="' + tone.tab + '"/>');
+      out.push('<rect x="' + f(m) + '" y="' + f(y) + '" width="' + f(nm.text === 'Arial' ? tw : 34 * fs) + '" height="' + f((nm.text === 'Arial' ? 1.6 : 3.4) * fs) + '" fill="' + (nm.text === 'Arial' ? C.ink : tone.tab) + '"/>');
       var kf = U.font(nm.text, 10.5 * fs, 700), kick = F.wrapSp(String(pc.kicker || '').toUpperCase(), kf, 1.3 * fs, tw, 1);
       y += 3.4 * fs + 16 * fs;
       out.push(F.lines(kick, m, y, 13 * fs, 10.5 * fs, { family: nm.S, weight: 700, ls: 1.3 * fs, fill: tone.body }));
@@ -5381,12 +5381,13 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
 
     /* header */
     var y = m + 2;
-    out.push('<rect x="' + f(m) + '" y="' + f(y) + '" width="' + f(34 * fs) + '" height="' + f(3.4 * fs) + '" fill="' + tone.tab + '"/>');
+    out.push('<rect x="' + f(m) + '" y="' + f(y) + '" width="' + f(nm.text === 'Arial' ? W - 2 * m : 34 * fs) + '" height="' + f((nm.text === 'Arial' ? 1.6 : 3.4) * fs) + '" fill="' + (nm.text === 'Arial' ? C.ink : tone.tab) + '"/>');
     y += 3.4 * fs + 16 * fs;
     out.push(F.text(m, y, 'LEGEND · ' + String(pc.kicker || '').toUpperCase(), 10.5 * fs, { family: nm.S, weight: 700, ls: 1.3 * fs, fill: tone.body }));
     y += 28 * fs;
-    var tl = F.wrapSp(pc.title, U.font(nm.title, 26 * fs, 700), -0.5 * fs, W - 2 * m, 2);
-    out.push(F.lines(tl, m, y, 29 * fs, 26 * fs, { family: nm.T, weight: 700, ls: -0.5 * fs, fill: C.ink })); y += (tl.length - 1) * 29 * fs;
+    var hd = nm.text === 'Arial' ? PCS.storm.heading(pc.title, nm.title, W - 2 * m, 24 * fs, 2) : null;
+    var tl = hd ? hd.lines : F.wrapSp(pc.title, U.font(nm.title, 26 * fs, 700), -0.5 * fs, W - 2 * m, 2);
+    out.push(F.lines(tl, m, y, 29 * fs, hd ? hd.size : 26 * fs, { family: nm.T, weight: hd ? 400 : 700, ls: hd ? hd.ls : -0.5 * fs, fill: C.ink })); y += (tl.length - 1) * 29 * fs;
     y += 17 * fs;
     var how = F.wrapSp('№ is the record number in date order, the same on the circle. The symbol and its colour give the category of action.', U.font(nm.text, 11 * fs, 400), 0, W - 2 * m, 2);
     out.push(F.lines(how, m, y, 14.5 * fs, 11 * fs, { family: nm.S, fill: tone.body })); y += (how.length - 1) * 14.5 * fs;
@@ -5417,7 +5418,7 @@ body.embed:not(.embed-wheel) .poster-viewport { touch-action: pan-y; }          
     }
 
     /* the keys of the circle and of the map (with its gradient), and the credit: everything the figure does not carry */
-    var Lk = 1.0, rdK = F.legend({ u: 1, s: Lk, x: m, y: y, TW: colW, C: C, names: nm, legend: L, groups: { reading: true } }),
+    var Lk = PCS.storm.on(config) ? Math.max(1.0, fs * 0.85) : 1.0, rdK = F.legend({ u: 1, s: Lk, x: m, y: y, TW: colW, C: C, names: nm, legend: L, groups: { reading: true } }),
       mpK = L.map ? F.legend({ u: 1, s: Lk, x: m + colW + gap, y: y, TW: colW, C: C, names: nm, legend: L, groups: { map: true } }) : null;
     out.push(rdK.svg); if (mpK) out.push(mpK.svg);
     y = Math.max(rdK.bottom, mpK ? mpK.bottom : 0) + 8 * fs;
@@ -6373,6 +6374,8 @@ window.PCS.DEFAULT_LOCATIONS = [
   /** Make `th` (from PCS.mmTheme.make) the colours of every figure drawn from now on. */
   R.setTheme = function (th) {
     R.theme = th;
+    FAM = th.storm ? "Arial, 'Liberation Sans', Helvetica, sans-serif" : "Inter, 'Helvetica Neue', Arial, sans-serif";
+    if (NAMES) { NAMES.title = th.storm ? 'Arial' : 'Inter Display'; NAMES.text = th.storm ? 'Arial' : 'Inter'; }
     C.bg = th.paper; C.ink = th.ink; C.ink2 = th.ink2; C.muted = th.muted; C.rule = th.rule; C.soft = th.soft; C.accent = th.accent; C.water = th.water.stream;
     replaceKeys(R.STAGE_COLOR, th.stage); replaceKeys(R.PAYER_COLOR, th.payer); replaceKeys(R.LOGIC_COLOR, th.logic);
     layerCache.key = '';
@@ -6840,7 +6843,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     var foot = [];
     if (o.hidden || outOfRange) foot.push((o.hidden ? o.hidden + ' amount' + (o.hidden === 1 ? ' is' : 's are') + ' hidden by the filters' : '') + (o.hidden && outOfRange ? ' · ' : '') + (outOfRange ? outOfRange + ' outside the time window' : '') + '.');
     if (o.credit) foot.push(o.credit);
-    foot.push('Inter and Inter Display (SIL OFL). Map: GLA305 QGIS project (EPSG:25830), INE municipal boundaries, hydrography, OpenStreetMap places.');
+    foot.push(PCS.storm.sources('Inter and Inter Display (SIL OFL). Map: GLA305 QGIS project (EPSG:25830), INE municipal boundaries, hydrography, OpenStreetMap places.'));
     var note = o.note || ('Poyo basin, DANA flood of 29 Oct 2024. ' + shown.length + ' amount' + (shown.length === 1 ? '' : 's') + ', each at its date and at the place it was spent or promised. Euro amounts are never added up: they overlap in scope and stage.');
     var rail = F.rail({ u: G.u, G: G, C: frameColours(), names: NAMES, kicker: o.kicker, title: o.title, noteLabel: o.noteLabel, note: note, legendFn: legendFn, foot: foot });
     out.push(rail.svg);
@@ -6859,7 +6862,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     var offView = onMap.filter(function (b) { return b.off; });
     if (offView.length) mapSvg.push(txt(mx0 + 10, yMapBot - 24, fitText('№ ' + offView.map(function (b) { return b.m.n; }).join(', ') + (offView.length === 1 ? ' lies' : ' lie') + ' outside this view and ' + (offView.length === 1 ? 'is' : 'are') + ' drawn at its edge. Change the map extent to see ' + (offView.length === 1 ? 'it' : 'them') + '.', '600 10.5px "Inter"', MW - 150), { size: 10.5, fill: C.accent, weight: 600, halo: 3 }));
     mapSvg.push('<g clip-path="url(#mm-clip)" pointer-events="none"><path id="mm-townhl" d="" fill="none" stroke="' + C.ink + '" stroke-width="2.4" stroke-linejoin="round"/></g>');
-    mapSvg.push(txt(mx0 + 10, yMapBot - 8, 'Basemap: GLA305 QGIS project (EPSG:25830) · municipalities, hydrography, OpenStreetMap places', { size: 8.5, fill: C.muted, halo: 3 }));
+    mapSvg.push(txt(mx0 + 10, yMapBot - 8, PCS.storm.sources('Basemap: GLA305 QGIS project (EPSG:25830) · municipalities, hydrography, OpenStreetMap places'), { size: 8.5, fill: C.muted, halo: 3 }));
     strips.forEach(function (t) {
       var sr = t.rect;
       mapSvg.push('<rect x="' + n1(sr[0]) + '" y="' + n1(sr[1]) + '" width="' + n1(sr[2]) + '" height="' + n1(sr[3]) + '" rx="3" fill="' + C.bg + '" fill-opacity="0.94" stroke="' + C.muted + '" stroke-width="1" stroke-dasharray="4 3"/>');
@@ -6901,8 +6904,8 @@ window.PCS.DEFAULT_LOCATIONS = [
         var hr = hits(xf + 4, xf + 8 + flw), hl = hits(xf - 8 - flw, xf - 4);
         if (!flEnd && hr > hl) flEnd = true; else if (flEnd && hl > hr) flEnd = false;
       }
-      axis.push('<line x1="' + n1(xf) + '" y1="' + n1(yTop) + '" x2="' + n1(xf) + '" y2="' + n1(yB) + '" stroke="' + C.accent + '" stroke-width="1.6" stroke-dasharray="5 3"/>');
-      axis.push(txt(flEnd ? xf - 6 : xf + 6, yTop + 8, fl, { size: 10.5, weight: 700, fill: C.accent, halo: 4, anchor: flEnd ? 'end' : 'start' }));
+      axis.push('<line x1="' + n1(xf) + '" y1="' + n1(yTop) + '" x2="' + n1(xf) + '" y2="' + n1(yB) + '" stroke="' + (R.theme.datum || C.accent) + '" stroke-width="1.6" stroke-dasharray="5 3"/>');
+      axis.push(txt(flEnd ? xf - 6 : xf + 6, yTop + 8, fl, { size: 10.5, weight: 700, fill: R.theme.datum || C.accent, halo: 4, anchor: flEnd ? 'end' : 'start' }));
     }
     out.push('<g id="mm-axis">' + axis.join('') + '</g>');
 
@@ -7187,7 +7190,7 @@ window.PCS.DEFAULT_LOCATIONS = [
       var part = list.slice(pi * per, (pi + 1) * per), s = [], rowsPer = Math.min(ROWS, Math.ceil(part.length / 2)), RH = Math.min(52, (H - 52 - y0 - 40) / Math.max(rowsPer, 14)), fz = RH >= 44 ? 13 : 12;
       s.push('<rect width="' + W + '" height="' + H + '" fill="' + C.bg + '"/>');
       var rail = F.rail({ u: G.u, G: G, C: frameColours(), names: NAMES, kicker: o.kicker, title: o.title + (nPages > 1 ? ' · ' + (pi + 1) + '/' + nPages : ''), noteLabel: 'Note', note: 'Numbers are the badges on the money map. Euro amounts are never added up: they overlap in scope and stage.', legend: null,
-        foot: [(o.credit || ''), 'Inter and Inter Display (SIL OFL).'].filter(Boolean) });
+        foot: [(o.credit || ''), PCS.storm.sources('Inter and Inter Display (SIL OFL).')].filter(Boolean) });
       s.push(rail.svg);
       s.push('<rect x="' + G.RW + '" y="0" width="1" height="' + H + '" fill="' + C.rule + '"/>');
       part.forEach(function (m, i) {
@@ -8842,12 +8845,13 @@ window.PCS.DEFAULT_LOCATIONS = [
       g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.fillStyle = C.bg; g.fillRect(0, 0, railCv.width, railCv.height);
       g.textBaseline = 'alphabetic';
       railInfo = { legendScale: null, fitted: false, overflow: false, legendBottom: 0, textWidth: TW };
-      g.fillStyle = LK.tab; g.fillRect(ML, 65 * u, 86 * u, 6 * u);                     // the one yellow tab
+      var stm = FT === 'Arial'; g.fillStyle = stm ? C.ink : LK.tab; g.fillRect(ML, 65 * u, stm ? TW : 86 * u, (stm ? 2.8 : 6) * u);                     // the one yellow tab
       var cy = KB, kf = f(14, 700), kick = wrapSp(String(rt.kicker || '').toUpperCase(), kf, 1.4 * u, TW, 2);
       spaced(g, kick, ML, KB, 18 * u, kf, LK.body, 1.4 * u);
-      var tf = f(44, 700, FT), tl = wrapSp(rt.title, tf, -0.88 * u, TW, 3);
-      spaced(g, tl, ML, TB, 48 * u, tf, C.ink, -0.88 * u);
-      cy = tl.length ? TB + (tl.length - 1) * 48 * u : (kick.length ? KB + (kick.length - 1) * 18 * u : 71 * u);
+      var hd = stm ? PCS.storm.heading(rt.title, FT, TW, 36 * u, 3) : null, tlh = hd ? hd.size * 1.2 : 48 * u;
+      var tf = hd ? U.font(FT, hd.size, 400) : f(44, 700, FT), tl = hd ? hd.lines : wrapSp(rt.title, tf, -0.88 * u, TW, 3);
+      spaced(g, tl, ML, TB, tlh, tf, C.ink, hd ? hd.ls : -0.88 * u);
+      cy = tl.length ? TB + (tl.length - 1) * tlh : (kick.length ? KB + (kick.length - 1) * 18 * u : 71 * u);
       var df = f(18, 400), desc = wrapSp(rt.description, df, 0, TW, 6);
       if (desc.length) {
         cy += 44 * u;
@@ -8890,7 +8894,7 @@ window.PCS.DEFAULT_LOCATIONS = [
         phase: function (g2, cx, cyc) { var sw = 26 * Ls / L.phaseScale.length; L.phaseScale.forEach(function (c, i) { g2.fillStyle = c; g2.fillRect(cx - 13 * Ls + i * sw, cyc - 6 * Ls, sw + 0.4, 12 * Ls); }); },
         feat: function (g2, cx, cyc) { rect(g2, cx, cyc, 26 * Ls, 12 * Ls, L.featuredColour); },
         span: function (g2, cx, cyc) { hline(g2, cx - 13 * Ls, cx + 13 * Ls, cyc, C.ink, 3 * Ls); g2.save(); g2.strokeStyle = C.ink; g2.lineWidth = 1.5 * Ls; g2.beginPath(); g2.moveTo(cx - 13 * Ls, cyc - 6 * Ls); g2.lineTo(cx - 13 * Ls, cyc + 6 * Ls); g2.stroke(); g2.restore(); },
-        datum: function (g2, cx, cyc) { hline(g2, cx - 13 * Ls, cx + 13 * Ls, cyc, C.accent, 2 * Ls, [5 * Ls, 3 * Ls]); },
+        datum: function (g2, cx, cyc) { hline(g2, cx - 13 * Ls, cx + 13 * Ls, cyc, C.datum || C.accent, 2 * Ls, [5 * Ls, 3 * Ls]); },
         emph: function (g2, cx, cyc) { rect(g2, cx, cyc, 26 * Ls, 12 * Ls, C.accent2, null, 0, 0.35); }
       };
       if (G.cats && L.categories.length) {
@@ -9094,8 +9098,8 @@ window.PCS.DEFAULT_LOCATIONS = [
       var shown = vis.filter(function (ev) { return t >= ev.arrive; }).length;
       ctx.save(); if ('letterSpacing' in ctx) ctx.letterSpacing = (1.5 * u) + 'px';
       txt(ctx, vis.length ? (shown ? 'EVENT ' + shown + ' OF ' + vis.length + (inCur ? ' · RECORD № ' + inCur.seq : '') : vis.length + ' EVENTS') : '', x, KB, f(15, 700), LK.body); ctx.restore();
-      ctx.save(); if ('letterSpacing' in ctx) ctx.letterSpacing = (-0.02 * (inCur && dateStr.length > 12 ? 34 : 44) * u) + 'px';
-      txt(ctx, dateStr.toUpperCase(), x, TB, f(inCur && dateStr.length > 12 ? 34 : 44, 700, FT), C.ink); ctx.restore();
+      ctx.save(); if ('letterSpacing' in ctx) ctx.letterSpacing = ((FT === 'Arial' ? 0.04 : -0.02) * (inCur && dateStr.length > 12 ? 34 : 44) * u) + 'px';
+      txt(ctx, dateStr.toUpperCase(), x, TB, f(inCur && dateStr.length > 12 ? 34 : 44, FT === 'Arial' ? 400 : 700, FT), C.ink); ctx.restore();
       // progress bar: the linear timeline with every record
       var bx = x, bw = tw, by = yTop.bar + 24 * u, frac = clamp01((ph - ring.a0) / (ring.a1 - ring.a0));
       ctx.fillStyle = C.rule; ctx.fillRect(bx, by - 1.5 * u, bw, 3 * u);
@@ -9123,14 +9127,14 @@ window.PCS.DEFAULT_LOCATIONS = [
         ctx.save(); ctx.globalAlpha = introA; var y = yTop.card + 8 * u;
         label(ctx, 'HOW TO READ', x, y + 10 * u);
         lines(ctx, introText, x, y + 44 * u, 23 * u, f(15.5, 400), LK.body);
-        txt(ctx, vis.length + ' EVENTS · ' + U.fdate(sc.start).toUpperCase() + ' – ' + U.fdate(sc.end).toUpperCase(), x, bottomLimit, f(11.5, 700), C.muted);
+        txt(ctx, vis.length + ' EVENTS · ' + U.fdate(sc.start).toUpperCase() + PCS.storm.to().toUpperCase() + U.fdate(sc.end).toUpperCase(), x, bottomLimit, f(11.5, 700), C.muted);
         ctx.restore();
       }
       if (outroA > 0.003) {
         ctx.save(); ctx.globalAlpha = outroA; var y2 = yTop.card + 20 * u;
         txt(ctx, String(vis.length), x, y2 + 84 * u, f(100, 700, FT), C.ink);
         txt(ctx, 'dated records', x, y2 + 118 * u, f(21, 700), C.ink);
-        lines(ctx, U.wrap(U.fdate(sc.start) + ' – ' + U.fdate(sc.end) + '. ' + (pc.credit || ''), f(14, 400), tw, 8), x, y2 + 158 * u, 20 * u, f(14, 400), C.muted);
+        lines(ctx, U.wrap(U.fdate(sc.start) + PCS.storm.to() + U.fdate(sc.end) + '. ' + (pc.credit || ''), f(14, 400), tw, 8), x, y2 + 158 * u, 20 * u, f(14, 400), C.muted);
         ctx.restore();
       }
     }
@@ -10715,6 +10719,7 @@ window.PCS.DEFAULT_LOCATIONS = [
   function applyPreset(id) { PCS.applyTheme(cfg(), id); commit(); draw(); }
   function applyGen(o) {
     var c = cfg(), g = T.generate(o);
+    if (PCS.storm.on(c)) PCS.storm.leave(c);
     Object.keys(g.poster).forEach(function (k) { c.poster[k] = g.poster[k]; });
     (c.categories || []).forEach(function (cat) { if (g.categories[cat.id]) cat.color = g.categories[cat.id]; });
     c.theme = 'generated'; c.themeGen = Object.assign({}, o);
@@ -10896,7 +10901,7 @@ window.PCS.DEFAULT_LOCATIONS = [
     }
     document.body.appendChild(el);
     $('th-close').onclick = UI.close;
-    $('th-reset').onclick = function () { cfg().poster.towns = ''; cfg().poster.townsStrength = 1; cfg().poster.townsStyle = ''; applyPreset('riverscape'); syncTowns(); };
+    $('th-reset').onclick = function () { cfg().poster.towns = ''; cfg().poster.townsStrength = 1; cfg().poster.townsStyle = ''; applyPreset('after-storm'); syncTowns(); };
     el.addEventListener('change', function (e) {
       var t = e.target, id = t.id, g = gen();
       if (id === 'th-scheme') { g.scheme = t.value; applyGen(g); draw(); }
@@ -11277,7 +11282,7 @@ window.PCS.DEFAULT_LOCATIONS = [
       b.appendChild(checkbox('Records with coordinates', 'map.markers'));
       var opts = [['', '(none)']].concat(model.events.filter(function (e) { return PCS.map.municipalitiesOf(e, cfg).length; }).map(function (e) { return [e.id, '№ ' + e.seq + ' ' + M.val(e, 'title', cfg).slice(0, 48)]; }));
       b.appendChild(field('Highlight in the exported poster', bindInput('select', 'map.exportHighlight', { options: opts }), 'On screen, clicking any record highlights its municipalities; clicking a municipality lists its records.'));
-      b.appendChild(h('div', { class: 'hint' }, esc(PCS.BASEMAP.municipalities.length + ' municipalities, ' + PCS.BASEMAP.subbasins.length + ' Poyo sub-basins, ' + PCS.BASEMAP.hydro.length + ' water polygons, ' + PCS.BASEMAP.places.length + ' places, from the GLA305 QGIS layers (EPSG:25830).')));
+      b.appendChild(h('div', { class: 'hint' }, esc(PCS.BASEMAP.municipalities.length + ' municipalities, ' + PCS.BASEMAP.subbasins.length + ' Poyo sub-basins, ' + PCS.BASEMAP.hydro.length + ' water polygons, ' + PCS.BASEMAP.places.length + PCS.storm.sources(' places, from the GLA305 QGIS layers (EPSG:25830).', cfg))));
     }));
 
     host.appendChild(section('actors', 'Institutions & people', function (b) {
@@ -11407,12 +11412,12 @@ window.PCS.DEFAULT_LOCATIONS = [
       b.appendChild(field('Figure side (mm)', bindInput('number', 'print.mm', { min: 100, max: 1200, step: 1 })));
       b.appendChild(field('Legend width (mm)', bindInput('number', 'print.legendW', { min: 60, max: 600, step: 1 })));
       b.appendChild(field('Legend height (mm)', bindInput('number', 'print.legendH', { min: 100, max: 1200, step: 1 })));
-      if (cfg.print.labels !== 'columns') b.appendChild(field('Time scale diameter: ' + st.axisMm + ' mm', bindInput('range', 'print.axisMm', { min: 200, max: 260, step: 1 }), 'The circle with the months and years. Not below 240 mm in the brief; a larger circle leaves the labels less room.'));
+      if (cfg.print.labels !== 'columns') b.appendChild(field('Time scale diameter: ' + st.axisMm + ' mm', bindInput('range', 'print.axisMm', { min: 200, max: 600, step: 1 }), 'The circle with the months and years. Not below 240 mm in the brief; a larger circle leaves the labels less room.'));
       b.appendChild(field('Time scale of the circle', seg('print.scale', [['overview', 'Overview', 'Event days spaced evenly in date order, not to scale: the dense weeks open up'], ['studio', 'As the studio', 'Whatever the Time scale and focus panel is set to']])));
       b.appendChild(checkbox('Pictures of the records between the symbol and the number', 'print.pictures'));
       if (cfg.print.pictures !== false) b.appendChild(field('Largest picture: ' + (cfg.print.pictureMm || 12) + ' mm', bindInput('range', 'print.pictureMm', { min: 6, max: 30, step: 1 }), 'Each picture is as large as the room along its label allows, up to this side, and never under 6 mm (it is left out where it cannot be). A smaller time circle leaves more room.'));
       b.appendChild(field('Periods left out', bindInput('text', 'print.skip', { placeholder: 'Temporary Public Space Repair' }), 'Period names (or the letters the legend shows), separated by semicolons. The other periods keep their letters.'));
-      b.appendChild(field('Type scale: ' + st.type.toFixed(2), bindInput('range', 'print.type', { min: 0.9, max: 1.6, step: 0.05 }), '1.2 gives 7.5 pt for the date and place on the figure and 8.5 pt for the titles in the legend.'));
+      b.appendChild(field('Type scale: ' + st.type.toFixed(2), bindInput('range', 'print.type', { min: 0.9, max: 2, step: 0.05 }), (PCS.storm.on(cfg) ? 'Smallest text: 6 pt at 1.2 and 10 pt (the panel minimum) at 2.0. For 2.0, enlarge the figure to 400 mm and the legend to 240 x 500 mm.' : '1.2 gives 7.5 pt for the date and place on the figure and 8.5 pt for the titles in the legend.')));
       b.appendChild(checkbox('Also put the title block on the figure (it is always on the legend)', 'print.title'));
       b.appendChild(checkbox('Also put the reading key and map key on the figure (they are always on the legend)', 'print.keys'));
       b.appendChild(field('Text under each record in the legend', bindInput('select', 'print.text', { options: [['auto', 'As many lines as fit'], ['0', 'Titles only'], ['1', '1 line'], ['2', '2 lines'], ['3', '3 lines']] })));
@@ -12348,6 +12353,169 @@ window.PCS.DEFAULT_LOCATIONS = [
   E._parts = parts; E._assemble = assemble;
 })(typeof window !== 'undefined' ? window : globalThis);
 
+</script>
+<script>/* js/viz/storm.js */
+/* =========================================================================
+   "After the Storm": one drawing look applied to every drawing of the
+   studio: chronogram, print figure and legend, money map, animation, embed.
+
+   The look is the theme "After the Storm". It is on when the drawing type is
+   Arial (only this theme sets Arial). Choosing any other theme gives the
+   studio's earlier drawings back. The web interface is not restyled.
+   ========================================================================= */
+(function (root) {
+  'use strict';
+  var PCS = root.PCS, U = PCS.util, P = PCS.poster, F = PCS.frame, T = PCS.mmTheme, K = U.color;
+  var ST = PCS.storm = {};
+  var ID = 'after-storm', FONT = 'Arial';
+
+  /* the design system's colour tokens */
+  var C = ST.TOKENS = {
+    paper: '#F4F1EA', paperWhite: '#FBFAF6', ink: '#2A2925', muted: '#5C5850', rule: '#8A8478', hairline: '#BDB6A6',
+    waterDeep: '#2B6680', water: '#5E9BB3', waterLight: '#A9CBD8', sea: '#D3E4E8',
+    storm: '#45525C', stormLight: '#C4CBCF', action: '#A84B27', actionLight: '#EBC3AE', system: '#66466A', systemLight: '#D9C8D8',
+    forest: '#8C9B6A', secano: '#DDCFA3', huerta: '#B9C49A', wetland: '#C3DAD3', urban: '#CFC8BB', building: '#8F887C', industrial: '#B9B2A6'
+  };
+
+  /* ---------------- the theme ------------------------------------------------ */
+  // Timelines, money and actors belong to SYSTEM. STORM marks what happened: the flood date, the disaster records and the featured response period.
+  // ACTION (terracotta) is for proposals, so the record of what happened does not use it.
+  var CATS = {
+    disaster: C.storm, emergency: C.building, temporary: C.secano, infrastructure: C.waterDeep,
+    community: C.systemLight, ecological: C.forest, planning: C.system, unclassified: C.hairline
+  };
+  PCS.THEMES.unshift({
+    id: ID, label: 'After the Storm',
+    poster: {
+      background: C.paper, ink: C.ink, muted: C.muted, rule: C.hairline, accent: C.system, accent2: C.system, water: C.waterDeep, phaseBase: C.system, featured: C.storm,
+      towns: C.systemLight, townsStrength: 1, townsStyle: 'steps', titleFont: FONT, textFont: FONT, monoFont: FONT
+    },
+    categories: CATS
+  });
+
+  /** Is this configuration drawn in the After the Storm look? */
+  ST.on = function (config) {
+    var c = config || (PCS.app && PCS.app.config) || PCS.DEFAULTS;
+    return !!(c && c.poster && c.poster.textFont === FONT);
+  };
+  var DEFAULT_CREDIT = PCS.DEFAULTS.poster.credit;
+  /** Leaving the look: the type, the town shading and the course credit go back to what the other themes expect. */
+  ST.leave = function (config) {
+    var p = config.poster;
+    p.titleFont = 'Inter Display'; p.textFont = 'Inter'; p.monoFont = 'Inter';
+    p.towns = ''; p.townsStrength = 1; p.townsStyle = '';
+    if (p.courseCreditHidden && !p.credit) p.credit = DEFAULT_CREDIT;
+    p.courseCreditHidden = false;
+  };
+  var apply = PCS.applyTheme;
+  PCS.applyTheme = function (config, id) {
+    var was = ST.on(config);
+    if (was && id !== ID) ST.leave(config);
+    apply(config, id);
+    // The default course credit is not printed in this look.
+    if (id === ID && config.poster.credit === DEFAULT_CREDIT) { config.poster.credit = ''; config.poster.courseCreditHidden = true; }
+  };
+
+  /* ---------------- the default of this build --------------------------------- */
+  PCS.applyTheme(PCS.DEFAULTS, ID);
+  // A studio that was last used with the former default look is moved to the new one, once. Other saved themes stay as they are.
+  (function () {
+    var FLAG = 'pcs.look.afterStorm.v1', KEY = 'pcs.config.v1';
+    try {
+      var saved = U.store.get(KEY, null);
+      if (U.store.get(FLAG, null)) return;
+      if (saved && saved.poster) {
+        if (!saved.theme || saved.theme === 'riverscape') { if (!saved.poster.textFont) saved.poster.textFont = 'Inter'; PCS.applyTheme(saved, ID); }
+        else if (!saved.poster.textFont) { saved.poster.titleFont = 'Inter Display'; saved.poster.textFont = 'Inter'; saved.poster.monoFont = 'Inter'; }
+        U.store.set(KEY, saved);
+      }
+      U.store.set(FLAG, 1);
+    } catch (e) { /* storage unavailable: the defaults apply */ }
+  })();
+
+  /* ---------------- type ------------------------------------------------------ */
+  // The studio measures some labels in Inter by name; in this look they are set, and therefore measured, in Arial.
+  var measure = U.measure;
+  U.measure = function (text, font) {
+    if (ST.on() && /"Inter( Display)?"/.test(font)) font = font.replace(/"Inter( Display)?"/, '"' + FONT + '"');
+    return measure.call(U, text, font);
+  };
+  // Arial is on the computer: the Inter files do not need to travel inside exported drawings.
+  if (PCS.exporter && PCS.exporter.fontCss) {
+    var fontCss = PCS.exporter.fontCss;
+    PCS.exporter.fontCss = function () { return ST.on() ? '' : fontCss.apply(this, arguments); };
+  }
+  /** Ranges are written with the word, not with a dash. */
+  ST.to = function () { return ST.on() ? ' to ' : ' – '; };
+  /** Credit line for type and map layers: without the Inter licence and the course code in this look. */
+  ST.sources = function (line, config) {
+    if (!ST.on(config)) return line;
+    return line.replace(/^(Typeface: )?Inter and Inter Display \((SIL OFL|SIL Open Font License)\)\.\s*/, '').replace(/GLA305 QGIS (layers|project)/g, 'QGIS $1').replace(/\bGLA ?305\b\s*/g, '');
+  };
+
+  /* ---------------- colours the poster palette adds in this look --------------- */
+  var palette = P.palette;
+  P.palette = function (config) {
+    var o = palette(config);
+    if (ST.on(config)) { o.datum = C.storm; o.sea = C.sea; o.seaLine = C.water; o.marsh = C.water; }
+    return o;
+  };
+  var titleColour = P.titleColour;
+  P.titleColour = function (cat, pal, config) { return ST.on(config) ? pal.ink : titleColour(cat, pal, config); };
+
+  /* ---------------- title block: ink rule, uppercase tracked heading ----------- */
+  var titleBlock = F.titleBlock;
+  F.titleBlock = function (o) {
+    if (!o.names || o.names.text !== FONT) return titleBlock(o);
+    var u = o.u, pal = o.C, x = o.x, TW = o.TW, y0 = o.y0 || 0, fam = F.fam(o.names), out = ['<g id="header">'];
+    out.push('<rect id="title-rule" x="' + x + '" y="' + (y0 + 65 * u) + '" width="' + TW + '" height="' + (2.8 * u) + '" fill="' + pal.ink + '"/>');
+    var KB = y0 + 102 * u, TB = y0 + 160 * u;
+    var kf = U.font(o.names.text, 13 * u, 700), kick = F.wrapSp(String(o.kicker || '').toUpperCase(), kf, 1.3 * u, TW, 2);
+    out.push(F.lines(kick, x, KB, 18 * u, 13 * u, { family: fam.S, weight: 700, ls: 1.3 * u, fill: pal.muted }));
+    var h = ST.heading(o.title, o.names.title, TW, 36 * u, o.titleLines || 3);
+    out.push(F.lines(h.lines, x, TB, h.size * 1.2, h.size, { family: fam.T, ls: h.ls, fill: pal.ink }));
+    var cy = h.lines.length ? TB + (h.lines.length - 1) * h.size * 1.2 : (kick.length ? KB + (kick.length - 1) * 18 * u : y0 + 71 * u);
+    var df = U.font(o.names.text, 18 * u, 400), desc = F.wrapSp(o.note, df, 0, TW, o.noteLines || 6);
+    if (desc.length) {
+      cy += 46 * u;
+      if (String(o.noteLabel || '').trim()) { out.push(F.text(x, cy, String(o.noteLabel).trim().toUpperCase(), 13 * u, { family: fam.S, weight: 700, ls: 1.3 * u, fill: pal.muted })); cy += 29 * u; }
+      out.push(F.lines(desc, x, cy, 25 * u, 18 * u, { family: fam.S, fill: pal.ink }));
+      cy += (desc.length - 1) * 25 * u;
+    }
+    out.push('</g>');
+    return { svg: out.join(''), bottom: cy };
+  };
+  /** A panel heading: capitals, regular weight, tracked by a tenth of the size; made smaller until no word is cut. → { lines, size, ls } */
+  ST.heading = function (title, family, width, size, maxLines) {
+    var text = String(title || '').toUpperCase(), words = text.split(/\s+/), s = size, lines, ls, i;
+    for (i = 0; i < 30; i++) {
+      ls = 0.1 * s;
+      var font = U.font(family, s, 400);
+      lines = F.wrapSp(text, font, ls, width, 99);
+      var widest = Math.max.apply(null, words.map(function (w) { return U.measure(w, font) + w.length * ls; }).concat([0]));
+      if (lines.length <= maxLines && widest <= width) break;
+      s *= 0.95;
+    }
+    return { lines: lines.slice(0, maxLines), size: s, ls: ls };
+  };
+
+  /* ---------------- money map -------------------------------------------------- */
+  var fromConfig = T.fromConfig;
+  T.fromConfig = function (cfg) {
+    var th = fromConfig(cfg);
+    if (!ST.on(cfg)) return th;
+    th.storm = true; th.datum = C.storm;
+    th.accent = C.system; th.accentSoft = C.systemLight; th.tab = C.ink; th.soft = C.paperWhite; th.rule = C.hairline; th.muted = C.muted; th.ink2 = C.ink; th.deep = C.ink;
+    th.water = { hue: th.water.hue, stream: C.waterDeep, marsh: C.water, sea: C.sea, seaLine: C.water };
+    th.cat = [C.system, C.ink, C.storm, C.forest, C.building, C.muted];
+    // the blues stay with water; a contract (tinted) and the work done (solid) share the green
+    th.stage = { paid: C.ink, transferred: C.system, executed: C.forest, committed: C.forest, intention: C.building, reimbursed: C.muted, other: C.rule, damage: C.storm };
+    th.payer = { 'Insurance (CCS)': C.ink, 'State': C.system, 'CHJ / MITECO': C.waterDeep, 'Generalitat': C.storm, 'Town halls': C.forest, 'European Union': C.building, 'Other': C.rule, 'Not stated': C.hairline };
+    th.logic = { 'Plans before the flood': C.system, 'Compensation for private loss': C.ink, 'Emergency response costs': C.storm, 'Aid to public bodies': C.waterDeep, 'Works and emergency contracts': C.forest, 'Land back to the river space': C.water, 'Funding sources': C.building, 'Not grouped': C.hairline };
+    th.key += '|' + ID;
+    return th;
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>/* js/ui/app.js */
 /* =========================================================================
